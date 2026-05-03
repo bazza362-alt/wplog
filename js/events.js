@@ -592,8 +592,8 @@ export const Events = {
         // Show/hide sections
         this._updateModalSections();
 
-        // Default target: cap for SO (time is locked), time otherwise
-        // Stats events: adjust for statsTimeMode
+        // Default target: cap for SO (locked) or when hardware pre-filled time;
+        // time otherwise. Stats events adjust for statsTimeMode.
         const isStatsMode = !this.game.enableLog && this.game.enableStats;
         const isStatsOnly = eventDef.statsOnly;
         const timeMode = this.game.statsTimeMode || "off";
@@ -607,7 +607,17 @@ export const Events = {
             this._setNumpadTarget(eventDef.teamOnly ? "time" : "cap");
         } else {
             timeField.classList.remove("hidden");
-            this._setNumpadTarget(isSO && !eventDef.teamOnly ? "cap" : "time");
+            // If hardware pre-filled the time, skip to cap so the first keypress
+            // isn't absorbed by the time field (player/swap events only —
+            // teamOnly events have no cap to move to).
+            const timePreFilled = this._timeRaw !== "";
+            if (isSO && !eventDef.teamOnly) {
+                this._setNumpadTarget("cap");
+            } else if (timePreFilled && !eventDef.teamOnly) {
+                this._setNumpadTarget("cap");
+            } else {
+                this._setNumpadTarget("time");
+            }
         }
 
         this.selectedTeam = null;
