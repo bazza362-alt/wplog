@@ -115,34 +115,32 @@ export const App = {
         initDialog("qr-dialog");
         qrDialog.addEventListener("click", () => qrDialog.close());
 
-        // Try to restore saved game
-        const saved = Storage.load();
-        if (saved && saved.rules) {
-            this.game = saved;
-            Game._recalcScores(this.game);
-            const restoredScreen = sessionStorage.getItem("wplog-screen") || "live";
-            this._showScreenWithInit(restoredScreen);
-        } else {
-            this.showScreen("setup");
-            Setup.init((game) => {
-                this.game = game;
-                this.showScreen("live");
-                Events.init(this.game);
-            });
-        }
-
-        // Nav buttons
-        document.getElementById("nav-setup").addEventListener("click", () => {
-            this.showScreen("setup");
-            Setup.init((game) => {
-                this.game = game;
-                this.showScreen("live");
-                Events.init(this.game);
-            });
-            if (this.game) {
-                Setup.updateForActiveGame(this.game);
-            }
+        // Register all tabs — native and external are equal, all activate via _activateTab()
+        this.registerTab("nav-setup", "screen-setup", {
+            onActivate: (game) => {
+                Setup.init((g) => {
+                    this.game = g;
+                    this._activateTabByName("live");
+                });
+                if (game) Setup.updateForActiveGame(game);
+            },
         });
+        this.registerTab("nav-live", "screen-live", {
+            requiresGame: true,
+            fallbackScreen: "setup",
+            wakeLock: true,
+            onActivate: (game) => Events.init(game),
+        });
+        this.registerTab("nav-sheet", "screen-sheet", {
+            requiresGame: true,
+            fallbackScreen: "setup",
+            onActivate: (game) => Sheet.render(game),
+        });
+        this.registerTab("nav-share", "screen-share", {
+            onActivate: (game) => Share.init(game),
+        });
+        this.registerTab("nav-help", "screen-help", {});
+
         // About Dialog (Setup Screen)
         const setupAbout = document.getElementById("setup-about-link");
         if (setupAbout) {
@@ -161,7 +159,6 @@ export const App = {
             });
         }
 
-
         // Hard Reset — uses native confirm() so it works even when custom code is broken
         document.getElementById("setup-hard-reset").addEventListener("click", async (e) => {
             e.preventDefault();
@@ -179,29 +176,15 @@ export const App = {
             location.reload();
         });
 
-        document.getElementById("nav-live").addEventListener("click", () => {
-            if (this.game) {
-                this.showScreen("live");
-                Events.init(this.game);
-            }
-        });
-
-        document.getElementById("nav-sheet").addEventListener("click", () => {
-            if (this.game) {
-                this.showScreen("sheet");
-                Sheet.render(this.game);
-            }
-        });
-
-
-        document.getElementById("nav-share").addEventListener("click", () => {
-            this.showScreen("share");
-            Share.init(this.game);
-        });
-
-        document.getElementById("nav-help").addEventListener("click", () => {
-            this.showScreen("help");
-        });
+        // Restore saved game, or start at setup
+        const saved = Storage.load();
+        if (saved && saved.rules) {
+            this.game = saved;
+            Game._recalcScores(this.game);
+            this._restoreScreen(sessionStorage.getItem("wplog-screen") || "live");
+        } else {
+            this._activateTabByName("setup");
+        }
 
         // Intercept native print to adjust layout dynamically
         window.addEventListener("beforeprint", () => {
@@ -303,83 +286,14 @@ export const App = {
         }
     },
 
-    showScreen(name) {
-        this.currentScreen = name;
-        sessionStorage.setItem("wplog-screen", name);
-        document.querySelectorAll(".screen").forEach((el) => {
-            el.classList.toggle("active", el.id === "screen-" + name);
-        });
-
-        // Update nav active state
-        document.querySelectorAll(".nav-btn").forEach((btn) => {
-            btn.classList.toggle("active", btn.id === "nav-" + name);
-        });
-
-        // Update disabled states — native buttons and any registered tabs
-        this._updateNavDisabled();
-
-        // Deactivate all registered tab screens/nav (native showScreen
-        // owns the active class sweep above; registered tabs are not in the switch)
-        this._tabs.forEach((reg) => {
-            const nav = document.getElementById(reg.navId);
-            const screen = document.getElementById(reg.screenId);
-            if (nav) nav.classList.remove("active");
-            if (screen) screen.classList.remove("active");
-        });
-
-        // Manage Wake Lock precisely for active games on Live screen
-        if (name === "live" && !!this.game) {
-            WakeLock.acquire();
-        } else {
-            WakeLock.release();
-        }
-    },
-
-
-    // Show a screen and initialize its module (used for restore on reload)
-    _showScreenWithInit(name) {
-        // Check registered tabs first — restored by session key
-        const ext = this._tabs.find((r) => r.screenId === "screen-" + name);
-        if (ext) {
-            this._activateTab(ext);
+    // Restore session screen on reload — applies requiresGame guard, falls back to setup.
+    _restoreScreen(name) {
+        const reg = this._tabs.find((r) => r.screenId === "screen-" + name);
+        if (!reg || (reg.requiresGame && !this.game)) {
+            this._activateTabByName("setup");
             return;
         }
-
-        switch (name) {
-            case "setup":
-                this.showScreen("setup");
-                Setup.init((game) => {
-                    this.game = game;
-                    this.showScreen("live");
-                    Events.init(this.game);
-                });
-                if (this.game) Setup.updateForActiveGame(this.game);
-                break;
-            case "sheet":
-                if (this.game) {
-                    this.showScreen("sheet");
-                    Sheet.render(this.game);
-                } else {
-                    this.showScreen("setup");
-                }
-                break;
-            case "share":
-                this.showScreen("share");
-                Share.init(this.game);
-                break;
-            case "help":
-                this.showScreen("help");
-                break;
-            case "live":
-            default:
-                if (this.game) {
-                    this.showScreen("live");
-                    Events.init(this.game);
-                } else {
-                    this.showScreen("setup");
-                }
-                break;
-        }
+        this._activateTab(reg);
     },
 
     // ── Tab Registration API ─────────────────────────────────
@@ -387,30 +301,39 @@ export const App = {
     /**
      * Register a nav/screen tab pair with the wplog tab manager.
      *
-     * Registered tabs participate in showScreen() active-state management,
-     * disabled-state management, and session restore on reload.
+     * All tabs — native and external — are equal. Each registered tab
+     * participates in active-state management, disabled-state management,
+     * and session restore on reload via _activateTab().
      *
      * @param {string} navId     - id of the <button class="nav-btn"> element
      * @param {string} screenId  - id of the <section class="screen"> element
      * @param {object} [opts]
-     * @param {boolean} [opts.requiresGame=false] - disable tab when no game is loaded
-     * @param {function} [opts.onActivate]        - called with current game on activation
+     * @param {boolean} [opts.requiresGame=false]  - disable tab when no game is loaded
+     * @param {string}  [opts.fallbackScreen=null] - screen name to activate when requiresGame
+     *                                               is true and no game exists (e.g. "setup")
+     * @param {boolean} [opts.wakeLock=false]      - acquire wake lock when this tab is active
+     *                                               and a game is loaded
+     * @param {function} [opts.onActivate]         - called with current game on activation;
+     *                                               same callback for clicks and session restore
      */
     registerTab(navId, screenId, opts = {}) {
-        const { requiresGame = false, onActivate = null } = opts;
-        const reg = { navId, screenId, requiresGame, onActivate };
+        const { requiresGame = false, fallbackScreen = null, wakeLock = false, onActivate = null } = opts;
+        const reg = { navId, screenId, requiresGame, fallbackScreen, wakeLock, onActivate };
         this._tabs.push(reg);
 
         const nav = document.getElementById(navId);
         if (!nav) return;
 
         nav.addEventListener("click", () => {
-            if (reg.requiresGame && !this.game) return;
+            if (reg.requiresGame && !this.game) {
+                if (reg.fallbackScreen) this._activateTabByName(reg.fallbackScreen);
+                return;
+            }
             this._activateTab(reg);
         });
     },
 
-    // Activate a registered tab — deactivates all native screens/nav.
+    // Activate a tab — single path for all screens, native and external.
     _activateTab(reg) {
         const key = reg.screenId.replace(/^screen-/, "");
         this.currentScreen = key;
@@ -425,16 +348,22 @@ export const App = {
         if (screen) screen.classList.add("active");
 
         this._updateNavDisabled();
-        WakeLock.release();
+
+        if (reg.wakeLock && this.game) WakeLock.acquire();
+        else WakeLock.release();
 
         if (reg.onActivate) reg.onActivate(this.game);
     },
 
-    // Centralizes disabled-state management for native and registered tabs.
+    // Look up a tab by screen name and activate it.
+    _activateTabByName(name) {
+        const reg = this._tabs.find((r) => r.screenId === "screen-" + name);
+        if (reg) this._activateTab(reg);
+    },
+
+    // Disabled-state management — drives entirely from _tabs.
     _updateNavDisabled() {
         const hasGame = !!this.game;
-        document.getElementById("nav-live").disabled = !hasGame;
-        document.getElementById("nav-sheet").disabled = !hasGame;
         this._tabs.forEach((reg) => {
             const nav = document.getElementById(reg.navId);
             if (nav) nav.disabled = reg.requiresGame && !hasGame;
