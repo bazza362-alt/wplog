@@ -176,9 +176,10 @@ These were explicitly discussed and agreed with the user:
 
 ---
 
-## Current State (as of 2026-04-21)
+## Current State (as of 2026-05-02)
 
 ### What's Done ✅
+- Out-of-order entries placed correctly within period (#239): New `_findInsertionSeq()` helper in `game.js` assigns a `seq` value from the midpoint gap between surrounding entries when a timed event's time places it earlier in the period than existing entries. Called by both `addEvent()` (post-confirmation) and `editEvent()` (on time or period change). Sort order unchanged — still by `seq`. `_nextSeq` always advances as the tail anchor.
 - Minor display fix: setup multiplier now consistently shown as NxM (#235): Removed spaces around × in the period summary (`"4×8 min"`) to match the existing timeout formatter style (`"2×TO"`).
 - Game setup selections persist between games (#233): Introduced `Setup._config` as the live setup model. All event handlers write to it; `_startGame()` reads from it; `_savePrefs()` / `_restorePrefs()` are trivial one-liners. `_applyConfigToDOM()` is the single render function (formal inverse of `_startGame()`). `Storage.savePrefs()` / `Storage.loadPrefs()` persist the config under `wplog_setup_prefs`. Game-specific fields (date, time, location, game #, team names) are intentionally excluded.
 - System theme default + anti-FOUC bootstrap (#232): Default theme changed from `"dark"` to `"system"` (follows OS preference). New `js/theme.js` synchronous bootstrap script runs in `<head>` before first CSS paint, seeding `localStorage` on first visit and immediately resolving the OS preference — eliminating theme flash. `app.js` and `setup.js` read `localStorage` directly (no fallback needed). Single source of truth for default lives in `theme.js`. Branching skill updated to reflect `v4` as the long-lived integration branch.
