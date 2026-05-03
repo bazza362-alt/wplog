@@ -125,7 +125,18 @@ export const ClockEngine = {
   _renderShotClock: function() {
     const el = document.getElementById('display-shot-clock');
     if (!el) return;
-    const str = formatDeviceClock(this.state.shot, { showSubseconds: true, isShotClock: true });
+
+    const { period, clock, shot } = this.state;
+
+    const shouldBlank =
+      period == null || period <= 0 ||                      // interval (break/half/unset)
+      shot == null   || shot >= 65535 ||                    // hardware blank sentinel
+      (clock != null && clock < 65535 && clock <= shot);   // GT <= SC
+
+    const str = shouldBlank
+      ? ''
+      : formatDeviceClock(shot, { showSubseconds: true, isShotClock: true });
+
     if (str !== this._lastShotStr) {
       el.textContent = str;
       this._lastShotStr = str;
@@ -134,8 +145,12 @@ export const ClockEngine = {
 
   _renderPeriod: function() {
     const p = this.state.period;
-    if (p == null || p <= 0) return;
-    const label = p <= 4 ? 'Q' + p : 'OT' + (p - 4);
+    if (p == null || p === 0) return;  // truly unset - leave display alone
+    let label;
+    if      (p === -2) label = 'HALF';
+    else if (p === -1) label = 'BREAK';
+    else if (p <= 4)   label = 'Q' + p;
+    else               label = 'OT' + (p - 4);
     if (label === this._lastPeriodStr) return;
     const el = document.getElementById('current-period');
     if (el) { el.textContent = label; this._lastPeriodStr = label; }

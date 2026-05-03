@@ -177,6 +177,12 @@ These were explicitly discussed and agreed with the user:
 
 ---
 
+## Current State (as of 2026-05-03)
+
+### What's Done ✅
+- Interval tracking in period display (#67): `_renderPeriod()` now maps hardware period values -1 and -2 to "BREAK" and "HALF" labels respectively, instead of silently skipping the update and leaving the display frozen at the last playing period. Period 0 / null is still treated as unset (no-op).
+- Shot clock blanking (#68): `_renderShotClock()` refactored with a single `shouldBlank` boolean covering three conditions: (1) interval frames (period <= 0), (2) hardware blank sentinel (shot >= 65535 / 0xFFFF), (3) GT <= SC - game clock at or below shot clock, making the shot clock irrelevant regardless of what hardware sends. All three conditions produce empty string (truly invisible element), not '--'.
+
 ## Current State (as of 2026-05-02)
 
 ### What's Done ✅
