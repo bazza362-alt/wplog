@@ -362,11 +362,15 @@ export const App = {
     },
 
     // Disabled-state management — drives entirely from _tabs.
+    // Only acts on tabs where requiresGame: true. Tabs with requiresGame: false
+    // are left alone — external callers may have disabled them for their own
+    // reasons and wplog must not silently re-enable them.
     _updateNavDisabled() {
         const hasGame = !!this.game;
         this._tabs.forEach((reg) => {
+            if (!reg.requiresGame) return;   // not wplog's concern — don't touch
             const nav = document.getElementById(reg.navId);
-            if (nav) nav.disabled = reg.requiresGame && !hasGame;
+            if (nav) nav.disabled = !hasGame;
         });
     },
 };
