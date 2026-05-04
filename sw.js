@@ -66,9 +66,20 @@ const ASSETS = [
 ];
 
 // Install — cache all assets
+// Uses individual fetches with Promise.allSettled so a single slow or
+// failing asset does not abort the entire installation. Missing assets
+// fall through to the network fetch handler on first use and get cached then.
 self.addEventListener("install", (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+        caches.open(CACHE_NAME).then((cache) =>
+            Promise.allSettled(
+                ASSETS.map((url) =>
+                    fetch(url).then((response) => {
+                        if (response.ok) return cache.put(url, response);
+                    }).catch(() => { /* skip — SW still installs */ })
+                )
+            )
+        )
     );
     // self.skipWaiting() intentionally omitted to allow UI-controlled update flow
 });
