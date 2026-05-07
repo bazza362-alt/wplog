@@ -21,6 +21,7 @@ import { escapeHTML } from './sanitize.js';
 import { initDialog } from './dialog.js';
 import { Storage } from './storage.js';
 import { getMaxMinutes, parseTime, formatTimeDisplay, formatTime } from './time.js';
+import { ClockEngine } from './clock.js';
 
 // wplog — Live Log Screen (Event Logging)
 // Event-first workflow: tap event button → modal opens → enter details → OK
@@ -555,7 +556,9 @@ export const Events = {
         // Set title
         this._setModalTitle(eventDef);
 
-        // Period selector
+        // Period selector — apply hardware period to game state synchronously,
+        // then use the (possibly advanced) currentPeriod as the selected period.
+        window._wpbApplyPeriod?.(this.game);
         this._selectedPeriod = this.game.currentPeriod;
         this._buildPeriodPills();
 
@@ -573,7 +576,13 @@ export const Events = {
             document.getElementById("time-display").innerHTML = this._formatTimeDisplay("000");
             timeField.classList.add("disabled");
         } else {
-            document.getElementById("time-display").innerHTML = this._formatTimeDisplay("");
+            const clockSecs = (window._wpbGetSeconds?.() ?? ClockEngine.getSeconds());
+            if (clockSecs != null) {
+                this._timeRaw = this._timeToRawDigits(clockSecs, this._getMaxMinutes());
+                document.getElementById("time-display").innerHTML = this._formatTimeDisplay(this._timeRaw);
+            } else {
+                document.getElementById("time-display").innerHTML = this._formatTimeDisplay("");
+            }
             timeField.classList.remove("disabled");
         }
         document.getElementById("cap-display").textContent = "";
@@ -583,8 +592,8 @@ export const Events = {
         // Show/hide sections
         this._updateModalSections();
 
-        // Default target: cap for SO (time is locked), time otherwise
-        // Stats events: adjust for statsTimeMode
+        // Default target: cap for SO (locked) or when hardware pre-filled time;
+        // time otherwise. Stats events adjust for statsTimeMode.
         const isStatsMode = !this.game.enableLog && this.game.enableStats;
         const isStatsOnly = eventDef.statsOnly;
         const timeMode = this.game.statsTimeMode || "off";
@@ -598,7 +607,17 @@ export const Events = {
             this._setNumpadTarget(eventDef.teamOnly ? "time" : "cap");
         } else {
             timeField.classList.remove("hidden");
-            this._setNumpadTarget(isSO && !eventDef.teamOnly ? "cap" : "time");
+            // If hardware pre-filled the time, skip to cap so the first keypress
+            // isn't absorbed by the time field (player/swap events only —
+            // teamOnly events have no cap to move to).
+            const timePreFilled = this._timeRaw !== "";
+            if (isSO && !eventDef.teamOnly) {
+                this._setNumpadTarget("cap");
+            } else if (timePreFilled && !eventDef.teamOnly) {
+                this._setNumpadTarget("cap");
+            } else {
+                this._setNumpadTarget("time");
+            }
         }
 
         this.selectedTeam = null;
@@ -1307,6 +1326,15 @@ export const Events = {
         container.innerHTML = "";
     },
 
+    /**
+     * Public entry point for external callers to repaint the score bar.
+     * Called by settings.js after applyPeriodToGame() advances the period.
+     */
+    refreshScoreBar() {
+        if (!this.game) return;
+        this._updateScoreBar();
+    },
+
     _updateScoreBar() {
         const score = Game.getDisplayScore(this.game);
         for (let i = 0; i < 2; i++) {
@@ -1314,8 +1342,10 @@ export const Events = {
             const val = t.code === "W" ? score.white : score.dark;
             document.getElementById(`score-value-${i}`).textContent = val;
         }
+        const hwPeriod = window._wpbGetPeriod?.();
+        const periodKey = hwPeriod != null ? hwPeriod : this.game.currentPeriod;
         document.getElementById("current-period").textContent = Game.getPeriodLabel(
-            this.game.currentPeriod, this.game.periods
+            periodKey, this.game.periods
         );
         this._updateTOL(this._teams[0].code, "tol-0");
         this._updateTOL(this._teams[1].code, "tol-1");

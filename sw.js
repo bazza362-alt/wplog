@@ -34,6 +34,7 @@ const ASSETS = [
     "./js/dialog.js",
     "./js/storage.js",
     "./js/time.js",
+    "./js/clock.js",
     "./js/wakelock.js",
     "./js/game.js",
     "./js/setup.js",
@@ -65,9 +66,20 @@ const ASSETS = [
 ];
 
 // Install — cache all assets
+// Uses individual fetches with Promise.allSettled so a single slow or
+// failing asset does not abort the entire installation. Missing assets
+// fall through to the network fetch handler on first use and get cached then.
 self.addEventListener("install", (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+        caches.open(CACHE_NAME).then((cache) =>
+            Promise.allSettled(
+                ASSETS.map((url) =>
+                    fetch(url).then((response) => {
+                        if (response.ok) return cache.put(url, response);
+                    }).catch(() => { /* skip — SW still installs */ })
+                )
+            )
+        )
     );
     // self.skipWaiting() intentionally omitted to allow UI-controlled update flow
 });
@@ -93,6 +105,16 @@ self.addEventListener("activate", (event) => {
 
 // Fetch — network-first in dev, cache-first in production
 self.addEventListener("fetch", (event) => {
+    // Never intercept SSE streams. Wrapping an EventSource in respondWith() leaves
+    // a service-worker-managed fetch that never resolves (SSE is an infinite stream).
+    // iOS Safari will not show the print dialog until all SW-managed fetches settle,
+    // so intercepting /events blocks print for ~60s until the HTTP timeout fires (#69).
+    const url = new URL(event.request.url);
+    if (event.request.headers.get("Accept")?.includes("text/event-stream") ||
+        url.pathname === "/events") {
+        return;
+    }
+
     if (APP_VERSION === "dev") {
         // Dev: always fetch from network, fall back to cache
         event.respondWith(
