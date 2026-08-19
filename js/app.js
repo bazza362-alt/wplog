@@ -24,6 +24,7 @@ import { Share } from './share.js';
 import { initDialog } from './dialog.js';
 import { WakeLock } from './wakelock.js';
 import { Game } from './game.js';
+import { Lineup } from './lineup.js';
 
 
 // wplog — App Initialization + Screen Navigation
@@ -116,10 +117,11 @@ export const App = {
         qrDialog.addEventListener("click", () => qrDialog.close());
 
         // Register all tabs — native and external are equal, all activate via _activateTab()
-        this.registerTab("nav-setup", "screen-setup", {
+         this.registerTab("nav-setup", "screen-setup", {
             onActivate: (game) => {
                 Setup.init((g) => {
                     this.game = g;
+                    Lineup.setGame(g);
                     this._activateTabByName("live");
                 });
                 if (game) Setup.updateForActiveGame(game);
@@ -129,7 +131,10 @@ export const App = {
             requiresGame: true,
             fallbackScreen: "setup",
             wakeLock: true,
-            onActivate: (game) => Events.init(game),
+            onActivate: (game) => {
+                Events.init(game);
+                Lineup.setGame(game);
+            },
         });
         this.registerTab("nav-sheet", "screen-sheet", {
             requiresGame: true,
@@ -181,6 +186,7 @@ export const App = {
         if (saved && saved.rules) {
             this.game = saved;
             Game._recalcScores(this.game);
+            Lineup.setGame(this.game);
             this._restoreScreen(sessionStorage.getItem("wplog-screen") || "live");
         } else {
             this._activateTabByName("setup");
