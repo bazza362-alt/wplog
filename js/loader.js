@@ -21,6 +21,7 @@
 import { App } from './app.js';
 import { ClockEngine } from './clock.js';
 import { loadConfig } from './config.js';
+import { Lineup } from './lineup.js';
 
 (async function () {
     const _cb = "?v=" + Date.now();
@@ -54,6 +55,7 @@ import { loadConfig } from './config.js';
 
     // DOMContentLoaded already fired, so manually init the app
     App.init();
+    Lineup.init();
 
     // Start the hardware SSE clock feed. Points to the iOS HTTPBridge
     // on localhost:5640. On wpboard hardware, settings.js calls
