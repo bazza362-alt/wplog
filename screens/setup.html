@@ -1,0 +1,185 @@
+<!--
+ Copyright 2026 Marko Milivojevic
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<h1 class="app-title">wplog</h1>
+<p class="app-subtitle">Water Polo Game Log</p>
+
+<!-- ── Essential fields (always visible) ── -->
+<div class="form-group">
+  <label for="setup-rules">Rules</label>
+  <select id="setup-rules" class="form-input"></select>
+</div>
+
+<div class="form-row" id="setup-team-row">
+  <div class="form-group">
+    <label id="setup-team-0-label"></label>
+    <div class="input-with-action">
+      <input id="setup-team-0-name" type="text" class="form-input">
+      <button type="button" id="setup-roster-upload-0" class="swap-btn" title="Upload roster CSV" aria-label="Upload roster CSV">
+        <img src="img/icon-upload.svg" class="btn-icon" alt="Upload">
+      </button>
+    </div>
+  </div>
+  <button type="button" id="setup-home-flip" class="swap-btn" title="Flip Home/Away">
+    <img src="img/icon-swap.svg" class="btn-icon" alt="Swap">
+  </button>
+  <div class="form-group">
+    <label id="setup-team-1-label"></label>
+    <div class="input-with-action">
+      <button type="button" id="setup-roster-upload-1" class="swap-btn" title="Upload roster CSV" aria-label="Upload roster CSV">
+        <img src="img/icon-upload.svg" class="btn-icon" alt="Upload">
+      </button>
+      <input id="setup-team-1-name" type="text" class="form-input">
+    </div>
+  </div>
+</div>
+<input type="file" id="setup-roster-file-0" accept=".csv,text/csv" class="sr-only">
+<input type="file" id="setup-roster-file-1" accept=".csv,text/csv" class="sr-only">
+
+
+<!-- ── Logging (collapsed by default) ── -->
+<details id="setup-logging-section" class="setup-foldable">
+  <summary class="setup-foldable-header">Logging: <span id="setup-logging-summary">Game Log Only</span></summary>
+  <div class="setup-foldable-content">
+    <div class="form-group">
+      <label id="label-logging-mode">Mode</label>
+      <div id="setup-logging-mode" class="segment-control" aria-labelledby="label-logging-mode">
+        <button type="button" class="segment-btn active" data-mode="log">Game Log Only</button>
+        <button type="button" class="segment-btn" data-mode="full">Both</button>
+        <button type="button" class="segment-btn" data-mode="stats">Stats Only</button>
+      </div>
+    </div>
+    <div class="form-group" id="setup-stats-time-group">
+      <label id="label-stats-time-mode">Stats Time Entry</label>
+      <div id="setup-stats-time-mode" class="segment-control disabled" aria-labelledby="label-stats-time-mode">
+        <button type="button" class="segment-btn active" data-value="off" disabled>Disabled</button>
+        <button type="button" class="segment-btn" data-value="optional" disabled>Optional</button>
+        <button type="button" class="segment-btn" data-value="on" disabled>Required</button>
+      </div>
+    </div>
+  </div>
+</details>
+
+<!-- ── Game Details (collapsed by default) ── -->
+<details id="setup-details-section" class="setup-foldable">
+  <summary class="setup-foldable-header">Game Details</summary>
+  <div class="setup-foldable-content">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="setup-date">Date</label>
+        <input id="setup-date" type="date" class="form-input">
+      </div>
+      <div class="form-group">
+        <label for="setup-time">Start Time</label>
+        <input id="setup-time" type="time" class="form-input">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="setup-location">Location</label>
+      <input id="setup-location" type="text" class="form-input" placeholder="Optional">
+    </div>
+
+    <div class="form-group">
+      <label for="setup-game-id">Game #</label>
+      <input id="setup-game-id" type="text" class="form-input" placeholder="Optional">
+    </div>
+  </div>
+</details>
+
+<!-- ── Game Setup (collapsed by default) ── -->
+<details id="setup-advanced-section" class="setup-foldable">
+  <summary class="setup-foldable-header">Game Setup: <span id="setup-game-summary">8 min · Overtime</span></summary>
+  <div class="setup-foldable-content">
+    <div class="form-group">
+      <label id="label-post-regulation">Post-Regulation</label>
+      <div id="setup-post-regulation" class="segment-control" aria-labelledby="label-post-regulation">
+        <button type="button" class="segment-btn" data-value="none">None</button>
+        <button type="button" class="segment-btn active" data-value="overtime">Overtime</button>
+        <button type="button" class="segment-btn" data-value="shootout">Shootout</button>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label id="label-num-periods">Periods</label>
+        <div id="setup-num-periods" class="stepper" data-min="1" data-max="6" data-value="4" aria-labelledby="label-num-periods">
+          <button type="button" class="stepper-btn stepper-dec" aria-label="Decrease">−</button>
+          <span class="stepper-value">4</span>
+          <button type="button" class="stepper-btn stepper-inc" aria-label="Increase">+</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label id="label-period-length">Period Length</label>
+        <div id="setup-period-length" class="stepper" data-min="1" data-max="20" data-value="8" data-suffix=" min" aria-labelledby="label-period-length">
+          <button type="button" class="stepper-btn stepper-dec" aria-label="Decrease">−</button>
+          <span class="stepper-value">8 min</span>
+          <button type="button" class="stepper-btn stepper-inc" aria-label="Increase">+</button>
+        </div>
+      </div>
+      <div class="form-group" id="setup-ot-length-group">
+        <label id="label-ot-length">OT Length</label>
+        <div id="setup-ot-length" class="stepper" data-min="1" data-max="20" data-value="3" data-suffix=" min" aria-labelledby="label-ot-length">
+          <button type="button" class="stepper-btn stepper-dec" aria-label="Decrease">−</button>
+          <span class="stepper-value">3 min</span>
+          <button type="button" class="stepper-btn stepper-inc" aria-label="Increase">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label id="label-to-full">Full TOs (per team)</label>
+        <div id="setup-to-full" class="stepper" data-min="0" data-max="3" data-value="3" data-unlimited="true" aria-labelledby="label-to-full">
+          <button type="button" class="stepper-btn stepper-dec" aria-label="Decrease">−</button>
+          <span class="stepper-value">3</span>
+          <button type="button" class="stepper-btn stepper-inc" aria-label="Increase">+</button>
+          <button type="button" class="stepper-btn stepper-set" data-set="-1" aria-label="Unlimited">
+            <img src="img/icon-infinity.svg" class="btn-icon" alt="Unlimited">
+          </button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label id="label-to-30">30s TOs (per team)</label>
+        <div id="setup-to-30" class="stepper" data-min="0" data-max="3" data-value="1" data-unlimited="true" aria-labelledby="label-to-30">
+          <button type="button" class="stepper-btn stepper-dec" aria-label="Decrease">−</button>
+          <span class="stepper-value">1</span>
+          <button type="button" class="stepper-btn stepper-inc" aria-label="Increase">+</button>
+          <button type="button" class="stepper-btn stepper-set" data-set="-1" aria-label="Unlimited">
+            <img src="img/icon-infinity.svg" class="btn-icon" alt="Unlimited">
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</details>
+
+<button id="setup-start-btn" class="btn btn-primary btn-large">Start Game</button>
+<button id="setup-load-btn" class="btn btn-primary btn-large">Load Game</button>
+<input type="file" id="setup-load-file" accept=".json" class="sr-only">
+
+<div class="inline-menu">
+  <div id="setup-theme-inline">
+    <span class="inline-toggle-link" data-theme="system">System</span> <span class="inline-toggle-sep">/</span>
+    <span class="inline-toggle-link" data-theme="dark">Dark</span> <span class="inline-toggle-sep">/</span>
+    <span class="inline-toggle-link" data-theme="light">Light</span>
+  </div>
+  <div>
+    <a id="setup-about-link" class="inline-toggle-link" href="#">About wplog</a>
+    <span class="inline-toggle-sep">|</span>
+    <a id="setup-hard-reset" class="inline-toggle-link" href="#">Restart App</a>
+  </div>
+</div>
