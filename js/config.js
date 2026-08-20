@@ -16,7 +16,7 @@
 
 // wplog — Application Version
 // Default is "dev"; deploy workflow injects the release tag.
-export const APP_VERSION = ".0.0.7-test";
+export const APP_VERSION = "0.0.9-final-test";
 
 // App-level defaults — fallbacks for missing rule-set properties
 export const DEFAULTS = {
