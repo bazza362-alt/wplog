@@ -81,7 +81,7 @@ export const Game = {
     },
 
     // Add an event to the game log
-    addEvent(game, { period, time, team, cap, event, note, swapType }) {
+    addEvent(game, { period, time, team, cap, event, note, swapType, shotType, outcome, opponentCap }) {
         const rules = RULES[game.rules];
         const eventDef = rules.events.find((e) => e.code === event);
         const isStatsOnly = eventDef && eventDef.statsOnly;
@@ -90,8 +90,9 @@ export const Game = {
         let scoreW = score.white;
         let scoreD = score.dark;
 
-        // Only count score for non-statsOnly Goal events
-        if (event === "G" && !isStatsOnly) {
+        // Only count score for non-statsOnly Shot events that resulted in a goal.
+        // outcome == null covers legacy games saved before shot outcomes existed.
+        if (event === "G" && !isStatsOnly && (outcome == null || outcome === "goal")) {
             if (team === "W") scoreW++;
             else scoreD++;
         }
@@ -113,7 +114,10 @@ export const Game = {
             scoreW,
             scoreD,
             note: note || "",
-            swapType: swapType
+            swapType: swapType,
+            shotType: shotType || undefined,
+            outcome: outcome || undefined,
+            opponentCap: opponentCap || undefined
         };
 
         game._nextSeq += 10;
@@ -247,7 +251,8 @@ export const Game = {
 
             const eventDef = rules.events.find((e) => e.code === entry.event);
             const isStatsOnly = eventDef && eventDef.statsOnly;
-            if (entry.event === "G" && !isStatsOnly) {
+            // outcome == null covers legacy games saved before shot outcomes existed.
+            if (entry.event === "G" && !isStatsOnly && (entry.outcome == null || entry.outcome === "goal")) {
                 if (entry.team === "W") scoreW++;
                 else scoreD++;
             }

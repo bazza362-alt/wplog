@@ -596,6 +596,26 @@ export const Lineup = {
 
                 </div>
 
+                <div class="sub-time-row">
+
+                    <label for="sub-time-input">
+                        Minuto del cambio
+                    </label>
+
+                    <input
+                        type="text"
+                        id="sub-time-input"
+                        data-time
+                        inputmode="numeric"
+                        placeholder="MM:SS"
+                        value="${
+                            this._time() != null
+                                ? this._formatTime(this._time())
+                                : ""
+                        }">
+
+                </div>
+
                 <div class="lineup-dialog-actions">
 
                     <button
@@ -735,8 +755,18 @@ export const Lineup = {
             "click",
             () => {
 
+                const timeInput =
+                    dlg.querySelector("[data-time]");
+
+                const manual =
+                    timeInput
+                        ? this._parseTime(timeInput.value)
+                        : null;
+
                 const now =
-                    this._time();
+                    manual != null
+                        ? manual
+                        : this._time();
 
                 const period =
                     this._period();
@@ -990,6 +1020,22 @@ export const Lineup = {
         return `${Math.floor(s / 60)}:${String(
             s % 60
         ).padStart(2, "0")}`;
+    },
+
+    _parseTime(value) {
+
+        if (!value) return null;
+
+        const parts = String(value).trim().split(":");
+
+        if (parts.length !== 2) return null;
+
+        const m = parseInt(parts[0], 10);
+        const s = parseInt(parts[1], 10);
+
+        if (Number.isNaN(m) || Number.isNaN(s)) return null;
+
+        return (m * 60) + s;
     },
 
     _esc(value) {
@@ -1348,6 +1394,45 @@ export const Lineup = {
                     rgba(127,127,127,.1);
 
                 font-weight: 600;
+            }
+
+            .sub-time-row {
+
+                margin-top: 10px;
+
+                display: flex;
+
+                align-items: center;
+
+                gap: 8px;
+            }
+
+            .sub-time-row label {
+
+                font-size: .8rem;
+
+                font-weight: 700;
+
+                opacity: .8;
+            }
+
+            .sub-time-row input {
+
+                flex: 1;
+
+                padding: 8px 10px;
+
+                border-radius: 8px;
+
+                border: 1px solid
+                    var(--border-color,#555);
+
+                background:
+                    var(--surface-color,#111);
+
+                color: inherit;
+
+                font-size: 1rem;
             }
 
             .history-table {

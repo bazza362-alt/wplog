@@ -230,6 +230,26 @@ export function validateGameData(parsed) {
                 }
             }
 
+            // shotType (optional, only for "Tiro"/Goal events)
+            if (entry.shotType != null && entry.shotType !== "") {
+                if (!_isString(entry.shotType) || !["A", "X", "CA", "6mt", "PS"].includes(entry.shotType)) {
+                    return _fail(`Log entry ${i + 1}: invalid shot type "${entry.shotType}".`);
+                }
+            }
+
+            // outcome (optional, only for "Tiro"/Goal events)
+            if (entry.outcome != null && entry.outcome !== "") {
+                if (!_isString(entry.outcome) || !["goal", "saved", "blocked", "post", "wide"].includes(entry.outcome)) {
+                    return _fail(`Log entry ${i + 1}: invalid outcome "${entry.outcome}".`);
+                }
+            }
+
+            // opponentCap (optional, only when outcome is "saved" or "blocked")
+            if (entry.opponentCap != null && entry.opponentCap !== "") {
+                if (!_isValidCap(entry.opponentCap)) {
+                    return _fail(`Log entry ${i + 1}: invalid opponent cap "${entry.opponentCap}".`);
+                }
+            }
             // ── Migrate legacy coach cap "C" → "HC" ──
             if (entry.cap === "C") entry.cap = "HC";
 
@@ -247,6 +267,9 @@ export function validateGameData(parsed) {
                 scoreD: entry.scoreD,
                 note: _isString(entry.note) ? entry.note : "",
                 swapType: _isString(entry.swapType) ? entry.swapType : undefined,
+                shotType: _isString(entry.shotType) ? entry.shotType : undefined,
+                outcome: _isString(entry.outcome) ? entry.outcome : undefined,
+                opponentCap: _isString(entry.opponentCap) ? entry.opponentCap : undefined,
             });
         }
 

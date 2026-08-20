@@ -26,7 +26,7 @@
       "shootout": true,
       "timeouts": { "full": 2, "to30": 0 },
       "events": [
-        { "name": "Goal", "code": "G", "color": "green", "align": "left" },
+        { "name": "Tiro", "code": "G", "color": "green", "align": "left" },
         { "name": "Exclusion", "code": "E", "color": "amber", "align": "right", "isPersonalFoul": true },
         { "name": "Penalty", "code": "P", "color": "amber", "align": "right", "isPersonalFoul": true },
         { "name": "Timeout", "code": "TO", "color": "blue", "teamOnly": true, "allowOfficial": true, "align": "center" },
@@ -50,7 +50,7 @@
       "shootout": false,
       "timeouts": { "full": 3, "to30": 1 },
       "events": [
-        { "name": "Goal", "code": "G", "color": "green", "align": "left" },
+        { "name": "Tiro", "code": "G", "color": "green", "align": "left" },
         { "name": "Exclusion", "code": "E", "color": "amber", "align": "right", "isPersonalFoul": true },
         { "name": "Penalty", "code": "P", "color": "amber", "align": "right", "isPersonalFoul": true },
         { "name": "Minor Act", "code": "MAM", "color": "amber", "align": "right", "isPersonalFoul": true, "autoFoulOut": 2 },
