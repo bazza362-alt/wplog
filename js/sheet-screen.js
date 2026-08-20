@@ -32,6 +32,7 @@ export function renderScreen(game, sheet, container) {
     page2.appendChild(sheet._renderFoulSummary(game));
     page2.appendChild(sheet._renderTimeoutSummary(game));
     page2.appendChild(sheet._renderCardSummary(game));
+    page2.appendChild(sheet._renderSubstitutions(game));
     page2.appendChild(sheet._renderPlayerStats(game));
     const roster = sheet._renderRoster(game);
     if (roster) page2.appendChild(roster);
