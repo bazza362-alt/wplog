@@ -6,6 +6,7 @@
 
 import { Storage } from "./storage.js";
 import { ClockEngine } from "./clock.js";
+import { getMaxMinutes, parseTime, formatTimeDisplay } from "./time.js";
 
 export const Lineup = {
     game: null,
@@ -119,6 +120,24 @@ export const Lineup = {
         return ClockEngine.getPeriod()
             || this.game?.currentPeriod
             || 1;
+    },
+
+    _maxMinutes() {
+        return getMaxMinutes(
+            this._period(),
+            this.game?.periodLength,
+            this.game?.otPeriodLength
+        );
+    },
+
+    _timeToRawDigits(seconds, maxMinutes) {
+        if (seconds === null || seconds === undefined) return "";
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        const isLong = maxMinutes >= 10;
+        return isLong
+            ? String(m).padStart(2, "0") + String(s).padStart(2, "0")
+            : String(m) + String(s).padStart(2, "0");
     },
 
     _teamLabel(team) {
@@ -596,23 +615,28 @@ export const Lineup = {
 
                 </div>
 
-                <div class="sub-time-row">
+                <div class="sub-step">
 
-                    <label for="sub-time-input">
-                        Minuto del cambio
-                    </label>
+                    <div class="sub-label">
+                        3. TEMPO DEL CAMBIO
+                    </div>
 
-                    <input
-                        type="text"
-                        id="sub-time-input"
-                        data-time
-                        inputmode="numeric"
-                        placeholder="MM:SS"
-                        value="${
-                            this._time() != null
-                                ? this._formatTime(this._time())
-                                : ""
-                        }">
+                    <div class="sub-time-display" data-time-display></div>
+
+                    <div class="sub-numpad" data-time-numpad>
+                        <button type="button" class="sub-numpad-btn" data-digit="1">1</button>
+                        <button type="button" class="sub-numpad-btn" data-digit="2">2</button>
+                        <button type="button" class="sub-numpad-btn" data-digit="3">3</button>
+                        <button type="button" class="sub-numpad-btn" data-digit="4">4</button>
+                        <button type="button" class="sub-numpad-btn" data-digit="5">5</button>
+                        <button type="button" class="sub-numpad-btn" data-digit="6">6</button>
+                        <button type="button" class="sub-numpad-btn" data-digit="7">7</button>
+                        <button type="button" class="sub-numpad-btn" data-digit="8">8</button>
+                        <button type="button" class="sub-numpad-btn" data-digit="9">9</button>
+                        <span></span>
+                        <button type="button" class="sub-numpad-btn" data-digit="0">0</button>
+                        <button type="button" class="sub-numpad-btn sub-numpad-clear" data-clear>⌫</button>
+                    </div>
 
                 </div>
 
@@ -644,6 +668,10 @@ export const Lineup = {
 
         let inCap = null;
 
+        const maxMinutes = this._maxMinutes();
+
+        let timeDigits = this._timeToRawDigits(this._time(), maxMinutes);
+
         const summary =
             dlg.querySelector(
                 "[data-summary]"
@@ -653,6 +681,17 @@ export const Lineup = {
             dlg.querySelector(
                 "[data-confirm]"
             );
+
+        const timeDisplay =
+            dlg.querySelector(
+                "[data-time-display]"
+            );
+
+        const renderTime = () => {
+            timeDisplay.innerHTML = formatTimeDisplay(timeDigits, maxMinutes);
+        };
+
+        renderTime();
 
         const update = () => {
 
@@ -704,8 +743,13 @@ export const Lineup = {
 
                     : "Seleziona un giocatore che esce e uno che entra.";
 
+            const parsedTime =
+                timeDigits.length
+                    ? parseTime(timeDigits, maxMinutes)
+                    : null;
+
             confirm.disabled =
-                !(outCap && inCap);
+                !(outCap && inCap && parsedTime);
         };
 
         dlg.querySelectorAll(
@@ -742,6 +786,44 @@ export const Lineup = {
 
         });
 
+        const maxDigits = maxMinutes >= 10 ? 4 : 3;
+
+        dlg.querySelectorAll(
+            "[data-time-numpad] [data-digit]"
+        ).forEach(b => {
+
+            b.addEventListener(
+                "click",
+                () => {
+
+                    timeDigits =
+                        timeDigits.length < maxDigits
+                            ? timeDigits + b.dataset.digit
+                            : timeDigits.slice(1) + b.dataset.digit;
+
+                    renderTime();
+
+                    update();
+                }
+            );
+
+        });
+
+        dlg.querySelector(
+            "[data-clear]"
+        ).addEventListener(
+            "click",
+            () => {
+
+                timeDigits =
+                    timeDigits.slice(0, -1);
+
+                renderTime();
+
+                update();
+            }
+        );
+
         dlg.querySelector(
             "[data-cancel]"
         ).addEventListener(
@@ -755,18 +837,12 @@ export const Lineup = {
             "click",
             () => {
 
-                const timeInput =
-                    dlg.querySelector("[data-time]");
+                const parsedTime =
+                    parseTime(timeDigits, maxMinutes);
 
-                const manual =
-                    timeInput
-                        ? this._parseTime(timeInput.value)
-                        : null;
+                if (!parsedTime) return;
 
-                const now =
-                    manual != null
-                        ? manual
-                        : this._time();
+                const now = parsedTime.stored;
 
                 const period =
                     this._period();
@@ -1020,22 +1096,6 @@ export const Lineup = {
         return `${Math.floor(s / 60)}:${String(
             s % 60
         ).padStart(2, "0")}`;
-    },
-
-    _parseTime(value) {
-
-        if (!value) return null;
-
-        const parts = String(value).trim().split(":");
-
-        if (parts.length !== 2) return null;
-
-        const m = parseInt(parts[0], 10);
-        const s = parseInt(parts[1], 10);
-
-        if (Number.isNaN(m) || Number.isNaN(s)) return null;
-
-        return (m * 60) + s;
     },
 
     _esc(value) {
@@ -1396,31 +1456,39 @@ export const Lineup = {
                 font-weight: 600;
             }
 
-            .sub-time-row {
+            .sub-time-display {
 
-                margin-top: 10px;
+                text-align: center;
 
-                display: flex;
+                font-size: 1.6rem;
 
-                align-items: center;
+                font-weight: 800;
 
-                gap: 8px;
+                letter-spacing: .05em;
+
+                padding: 10px;
+
+                border-radius: 8px;
+
+                background:
+                    rgba(127,127,127,.1);
+
+                margin-bottom: 8px;
             }
 
-            .sub-time-row label {
+            .sub-numpad {
 
-                font-size: .8rem;
+                display: grid;
 
-                font-weight: 700;
+                grid-template-columns:
+                    repeat(4,minmax(0,1fr));
 
-                opacity: .8;
+                gap: 6px;
             }
 
-            .sub-time-row input {
+            .sub-numpad-btn {
 
-                flex: 1;
-
-                padding: 8px 10px;
+                padding: 10px 0;
 
                 border-radius: 8px;
 
@@ -1428,11 +1496,19 @@ export const Lineup = {
                     var(--border-color,#555);
 
                 background:
-                    var(--surface-color,#111);
+                    var(--button-bg,#222);
 
                 color: inherit;
 
-                font-size: 1rem;
+                font-weight: 700;
+
+                font-size: 1.1rem;
+            }
+
+            .sub-numpad-clear {
+
+                color:
+                    var(--danger-color,#ff5c5c);
             }
 
             .history-table {
