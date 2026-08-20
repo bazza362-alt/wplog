@@ -387,7 +387,6 @@ export const Sheet = {
     },
 
     _renderPlayerStats(game) {
-    _renderPlayerStats(game) {
         const data = Game.buildPlayerStats(game);
         const section = document.createElement("div");
         section.className = "sheet-section sheet-player-stats-section";
