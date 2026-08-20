@@ -335,7 +335,58 @@ export const Sheet = {
         section.appendChild(table);
         return section;
     },
+    _renderSubstitutions(game) {
+        const subs = Array.isArray(game.substitutions) ? game.substitutions : [];
+        const section = document.createElement("div");
+        section.className = "sheet-section sheet-substitutions-section";
+        section.innerHTML = `<div class="sheet-section-title">Substitutions</div>`;
 
+        if (subs.length === 0) {
+            const empty = document.createElement("p");
+            empty.className = "sheet-empty";
+            empty.textContent = "No substitutions recorded.";
+            section.appendChild(empty);
+            return section;
+        }
+
+        const playerName = (teamKey, cap) => {
+            const entry = game[teamKey] && game[teamKey].roster && game[teamKey].roster[cap];
+            return entry && entry.name ? entry.name : `#${cap}`;
+        };
+
+        const ordered = [...subs].sort((a, b) => {
+            if (a.period !== b.period) return String(a.period).localeCompare(String(b.period));
+            return (a.time ?? 0) - (b.time ?? 0);
+        });
+
+        const table = document.createElement("table");
+        table.className = "sheet-table";
+        table.innerHTML = `
+      <thead>
+        <tr><th>Period</th><th>Time</th><th>Team</th><th>Out</th><th>In</th></tr>
+      </thead>
+    `;
+
+        const tbody = document.createElement("tbody");
+        for (const s of ordered) {
+            const teamKey = s.team === "W" ? "white" : "dark";
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+        <td>${escapeHTML(String(s.period))}</td>
+        <td>${s.time != null ? formatTime(s.time) : "--:--"}</td>
+        <td>${s.team}</td>
+        <td>#${escapeHTML(s.out)} ${escapeHTML(playerName(teamKey, s.out))}</td>
+        <td>#${escapeHTML(s.in)} ${escapeHTML(playerName(teamKey, s.in))}</td>
+      `;
+            tbody.appendChild(tr);
+        }
+
+        table.appendChild(tbody);
+        section.appendChild(table);
+        return section;
+    },
+
+    _renderPlayerStats(game) {
     _renderPlayerStats(game) {
         const data = Game.buildPlayerStats(game);
         const section = document.createElement("div");

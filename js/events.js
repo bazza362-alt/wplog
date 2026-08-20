@@ -1406,16 +1406,21 @@ export const Events = {
           <button class="log-delete-btn" data-id="${entry.id}" title="Delete">✕</button>
         `;
             } else {
-                const eventDef = this._getEventDef(entry.event);
-                let eventName = eventDef ? eventDef.name : entry.event;
-                let capDisplay = escapeHTML(entry.cap);
-
                 if (entry.event === "Cap swap") {
                     eventName = "Cap swap";
                     const arrow = entry.swapType === "uni" ? "\u2192" : "\u21C4";
                     capDisplay = `${escapeHTML(entry.cap)} ${arrow} ${escapeHTML(entry.note)}`;
                 }
-                
+
+                if (entry.event === "G" && entry.outcome) {
+                    const outcomeLabels = { goal: "Goal", saved: "Parato", blocked: "Stoppato", post: "Palo", wide: "Fuori" };
+                    const outcomeLabel = outcomeLabels[entry.outcome] || entry.outcome;
+                    let detail = outcomeLabel;
+                    if (entry.shotType) detail = `${entry.shotType} — ${detail}`;
+                    if (entry.opponentCap) detail += ` (#${escapeHTML(entry.opponentCap)})`;
+                    eventName = `Tiro: ${detail}`;
+                }
+
                 const isStatEvent = eventDef && eventDef.statsOnly;
                 const colorClass = this._getEventClass(entry.event);
 
