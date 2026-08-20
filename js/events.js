@@ -22,6 +22,7 @@ import { initDialog } from './dialog.js';
 import { Storage } from './storage.js';
 import { getMaxMinutes, parseTime, formatTimeDisplay, formatTime } from './time.js';
 import { ClockEngine } from './clock.js';
+import { ShotDetails } from './shotdetails.js';
 
 // wplog — Live Log Screen (Event Logging)
 // Event-first workflow: tap event button → modal opens → enter details → OK
@@ -1145,6 +1146,16 @@ export const Events = {
             this._showToast("Event updated", "info");
         } else {
             // ── New event ────────────────────────────────────
+
+            // "Tiro" (Shot/Goal) events need a second step: shot type,
+            // outcome, and (if saved/blocked) which opponent made the play.
+            let shotDetails = {};
+            if (eventDef.code === "G") {
+                const result = await ShotDetails.prompt(this.game, team || this.selectedTeam);
+                if (!result) return; // user cancelled — keep the main modal open
+                shotDetails = result;
+            }
+
             // Check foul-out BEFORE logging (skip for statsOnly events)
             const foulOut = (eventDef.teamOnly || isStatsOnly)
                 ? null
@@ -1158,7 +1169,10 @@ export const Events = {
                 cap: eventDef.teamOnly ? "" : cap,
                 event: eventDef.code,
                 note: eventDef.isSwap ? this._altCapRaw : "",
-                swapType: eventDef.isSwap ? this._swapType : undefined
+                swapType: eventDef.isSwap ? this._swapType : undefined,
+                shotType: shotDetails.shotType,
+                outcome: shotDetails.outcome,
+                opponentCap: shotDetails.opponentCap
             });
             Storage.save(this.game);
 
