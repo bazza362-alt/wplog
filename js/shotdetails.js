@@ -7,7 +7,7 @@
 
 export const ShotDetails = {
 
-    SHOT_TYPES: ["A", "X", "CA", "6mt", "PS"],
+    SHOT_TYPES: ["A", "X", "CA", "6mt", "PS", "C"],
 
     OUTCOMES: [
         { code: "goal", label: "Goal" },
@@ -41,7 +41,7 @@ export const ShotDetails = {
 
                     <div class="sd-step">
                         <div class="sd-label">1. TIPO DI TIRO</div>
-                        <div class="sd-grid" data-shottype>
+                        <div class="sd-grid sd-grid-shottype" data-shottype>
                             ${this.SHOT_TYPES.map(t => `
                                 <button type="button" class="sd-opt" data-value="${t}">${t}</button>
                             `).join("")}
@@ -229,6 +229,9 @@ export const ShotDetails = {
                 display: grid;
                 grid-template-columns: repeat(5,minmax(0,1fr));
                 gap: 6px;
+            }
+            .sd-grid-shottype {
+                grid-template-columns: repeat(3,minmax(0,1fr));
             }
             .sd-grid-opponent {
                 grid-template-columns: repeat(2,minmax(0,1fr));
