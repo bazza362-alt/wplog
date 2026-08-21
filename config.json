@@ -8,8 +8,8 @@
     { "name": "Rebound", "color": "teal", "statsOnly": true },
     { "name": "Field Block", "color": "teal", "statsOnly": true },
     { "name": "Save", "color": "teal", "statsOnly": true },
-    { "name": "Drawn Exclusion", "color": "teal", "statsOnly": true },
-    { "name": "Drawn Penalty", "color": "teal", "statsOnly": true },
+    { "name": "Drawn Exclusion", "color": "teal", "statsOnly": true, "hidden": true },
+    { "name": "Drawn Penalty", "color": "teal", "statsOnly": true, "hidden": true },
     { "name": "Sprint Won", "color": "teal", "statsOnly": true }
   ],
   "RULES": {
