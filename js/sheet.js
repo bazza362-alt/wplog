@@ -449,6 +449,73 @@ export const Sheet = {
         return section;
     },
 
+    _renderPlayerShotDetail(game) {
+        const data = Game.buildPlayerShotDetail(game);
+        const section = document.createElement("div");
+        section.className = "sheet-section sheet-shotdetail-section";
+        section.innerHTML = `<div class="sheet-section-title">Shot Detail by Player</div>`;
+
+        const outcomeLabels = { goal: "Goal", saved: "Parato", blocked: "Stoppato", post: "Palo", wide: "Fuori" };
+
+        const hasAny = Object.keys(data.W).length > 0 || Object.keys(data.D).length > 0;
+        if (!hasAny) {
+            const empty = document.createElement("p");
+            empty.className = "sheet-empty";
+            empty.textContent = "No shot data recorded.";
+            section.appendChild(empty);
+            return section;
+        }
+
+        const teams = Game.getTeams(game);
+
+        for (const t of teams) {
+            const teamData = data[t.code];
+            const caps = Object.keys(teamData).sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+            if (caps.length === 0) continue;
+
+            const wrapper = document.createElement("div");
+            wrapper.className = "sheet-section";
+
+            const subTitle = document.createElement("h3");
+            subTitle.className = "sheet-section-title";
+            subTitle.textContent = t.label;
+            wrapper.appendChild(subTitle);
+
+            const table = document.createElement("table");
+            table.className = "sheet-table sheet-table-compact";
+            table.innerHTML = `
+        <thead>
+          <tr><th>Cap</th><th>Period</th><th>Time</th><th>Type</th><th>Outcome</th></tr>
+        </thead>
+      `;
+
+            const tbody = document.createElement("tbody");
+            for (const cap of caps) {
+                const periods = Object.keys(teamData[cap]);
+                for (const period of periods) {
+                    const shots = teamData[cap][period];
+                    for (const shot of shots) {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+          <td>${escapeHTML(cap)}</td>
+          <td>${escapeHTML(period)}</td>
+          <td>${shot.time != null ? escapeHTML(formatTime(shot.time)) : "-"}</td>
+          <td>${escapeHTML(shot.shotType)}</td>
+          <td>${escapeHTML(outcomeLabels[shot.outcome] || shot.outcome)}</td>
+        `;
+                        tbody.appendChild(tr);
+                    }
+                }
+            }
+
+            table.appendChild(tbody);
+            wrapper.appendChild(table);
+            section.appendChild(wrapper);
+        }
+
+        return section;
+    },
+
     _renderPlayerStats(game) {
         const data = Game.buildPlayerStats(game);
         const section = document.createElement("div");
