@@ -25,7 +25,7 @@ export function renderScreen(game, sheet, container) {
     page1.appendChild(sheet._renderProgressOfGame(game));
     container.appendChild(page1);
 
-    // Page 2: Period Scores + Fouls + Timeouts + Cards + Player Stats
+    // Page 2: Period Scores + Fouls + Timeouts + Cards + Substitutions + Shot Types + Player Stats
     const page2 = document.createElement("div");
     page2.className = "sheet-page";
     page2.appendChild(sheet._renderPeriodScores(game));
@@ -33,6 +33,7 @@ export function renderScreen(game, sheet, container) {
     page2.appendChild(sheet._renderTimeoutSummary(game));
     page2.appendChild(sheet._renderCardSummary(game));
     page2.appendChild(sheet._renderSubstitutions(game));
+    page2.appendChild(sheet._renderShotTypeSummary(game));
     page2.appendChild(sheet._renderPlayerStats(game));
     const roster = sheet._renderRoster(game);
     if (roster) page2.appendChild(roster);
