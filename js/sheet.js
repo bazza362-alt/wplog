@@ -142,6 +142,10 @@ export const Sheet = {
                     eventDisplay = "Cap swap";
                     const arrow = entry.swapType === "uni" ? "\u2192" : "\u21C4";
                     capDisplay = escapeHTML(entry.cap) + ` ${arrow} ` + escapeHTML(entry.note);
+                } else if (entry.event === "G") {
+                    // Distinguish converted shots (G) from missed ones (S).
+                    const scored = entry.outcome == null || entry.outcome === "goal";
+                    eventDisplay = scored ? "G" : "S";
                 } else {
                     const eventDef = rules.events.find((e) => e.code === entry.event);
                     if (eventDef && eventDef.align) align = eventDef.align;
@@ -335,6 +339,7 @@ export const Sheet = {
         section.appendChild(table);
         return section;
     },
+
     _renderSubstitutions(game) {
         const subs = Array.isArray(game.substitutions) ? game.substitutions : [];
         const section = document.createElement("div");
@@ -383,6 +388,64 @@ export const Sheet = {
 
         table.appendChild(tbody);
         section.appendChild(table);
+        return section;
+    },
+
+    _renderShotTypeSummary(game) {
+        const { types, summary } = Game.buildShotTypeSummary(game);
+        const section = document.createElement("div");
+        section.className = "sheet-section sheet-shottypes-section";
+        section.innerHTML = `<div class="sheet-section-title">Shot Types</div>`;
+
+        const hasAny = types.some(t => summary.W[t].attempts > 0 || summary.D[t].attempts > 0);
+        if (!hasAny) {
+            const empty = document.createElement("p");
+            empty.className = "sheet-empty";
+            empty.textContent = "No shot type data recorded.";
+            section.appendChild(empty);
+            return section;
+        }
+
+        const teams = Game.getTeams(game);
+
+        for (const t of teams) {
+            const teamData = summary[t.code];
+
+            const wrapper = document.createElement("div");
+            wrapper.className = "sheet-section";
+
+            const subTitle = document.createElement("h3");
+            subTitle.className = "sheet-section-title";
+            subTitle.textContent = t.label;
+            wrapper.appendChild(subTitle);
+
+            const table = document.createElement("table");
+            table.className = "sheet-table sheet-table-compact";
+            table.innerHTML = `
+        <thead>
+          <tr><th>Type</th><th>Attempts</th><th>Goals</th><th>%</th></tr>
+        </thead>
+      `;
+
+            const tbody = document.createElement("tbody");
+            for (const type of types) {
+                const d = teamData[type];
+                const pct = d.attempts > 0 ? Math.round((d.goals / d.attempts) * 100) : null;
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+          <td>${escapeHTML(type)}</td>
+          <td>${d.attempts}</td>
+          <td>${d.goals}</td>
+          <td>${pct === null ? "-" : pct + "%"}</td>
+        `;
+                tbody.appendChild(tr);
+            }
+
+            table.appendChild(tbody);
+            wrapper.appendChild(table);
+            section.appendChild(wrapper);
+        }
+
         return section;
     },
 
