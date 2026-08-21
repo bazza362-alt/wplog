@@ -23,6 +23,7 @@ import { Storage } from './storage.js';
 import { getMaxMinutes, parseTime, formatTimeDisplay, formatTime } from './time.js';
 import { ClockEngine } from './clock.js';
 import { ShotDetails } from './shotdetails.js';
+import { FoulDetails } from './fouldetails.js';
 
 // wplog — Live Log Screen (Event Logging)
 // Event-first workflow: tap event button → modal opens → enter details → OK
@@ -1156,6 +1157,15 @@ export const Events = {
                 shotDetails = result;
             }
 
+            // "Exclusion" and "Penalty" events need a second step: who from
+            // the opposing team caused/earned it (and, for Exclusion, the type).
+            let foulDetails = {};
+            if (eventDef.code === "E" || eventDef.code === "P") {
+                const result = await FoulDetails.prompt(this.game, team || this.selectedTeam, eventDef.code);
+                if (!result) return; // user cancelled — keep the main modal open
+                foulDetails = result;
+            }
+
             // Check foul-out BEFORE logging (skip for statsOnly events)
             const foulOut = (eventDef.teamOnly || isStatsOnly)
                 ? null
@@ -1172,7 +1182,8 @@ export const Events = {
                 swapType: eventDef.isSwap ? this._swapType : undefined,
                 shotType: shotDetails.shotType,
                 outcome: shotDetails.outcome,
-                opponentCap: shotDetails.opponentCap
+                opponentCap: shotDetails.opponentCap || foulDetails.opponentCap,
+                exclusionType: foulDetails.exclusionType
             });
             Storage.save(this.game);
 
@@ -1262,6 +1273,7 @@ export const Events = {
         // Stats-only mode: show ALL events in config order, all teal
         if (statsOnly) {
             for (const evt of rules.events) {
+                if (evt.hidden) continue;
                 const btn = document.createElement("button");
                 btn.className = "event-btn event-teal";
                 btn.textContent = evt.name;
@@ -1295,6 +1307,7 @@ export const Events = {
 
             if (showStats) {
                 for (const evt of statEvents) {
+                    if (evt.hidden) continue;
                     const btn = document.createElement("button");
                     btn.className = "event-btn event-teal";
                     btn.textContent = evt.name;
@@ -1406,6 +1419,10 @@ export const Events = {
           <button class="log-delete-btn" data-id="${entry.id}" title="Delete">✕</button>
         `;
             } else {
+                const eventDef = this._getEventDef(entry.event);
+                let eventName = eventDef ? eventDef.name : entry.event;
+                let capDisplay = escapeHTML(entry.cap);
+
                 if (entry.event === "Cap swap") {
                     eventName = "Cap swap";
                     const arrow = entry.swapType === "uni" ? "\u2192" : "\u21C4";
@@ -1419,6 +1436,15 @@ export const Events = {
                     if (entry.shotType) detail = `${entry.shotType} — ${detail}`;
                     if (entry.opponentCap) detail += ` (#${escapeHTML(entry.opponentCap)})`;
                     eventName = `Tiro: ${detail}`;
+                }
+
+                if (entry.event === "E" && entry.exclusionType) {
+                    eventName = `Esclusione ${entry.exclusionType}`;
+                    if (entry.opponentCap) eventName += ` — causata da #${escapeHTML(entry.opponentCap)}`;
+                }
+
+                if (entry.event === "P" && entry.opponentCap) {
+                    eventName = `Rigore — guadagnato da #${escapeHTML(entry.opponentCap)}`;
                 }
 
                 const isStatEvent = eventDef && eventDef.statsOnly;

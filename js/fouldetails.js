@@ -1,72 +1,63 @@
 /**
- * wplog — Shot Details
+ * wplog — Foul Details
  *
- * Second-step dialog for "Tiro" (Shot/Goal) events: shot type,
- * outcome, and (if saved/blocked) which opponent made the play.
+ * Second-step dialog for Exclusion and Penalty events: the opposing
+ * player who caused/earned it, and (for Exclusion) the type.
  */
 
-export const ShotDetails = {
+export const FoulDetails = {
 
-    SHOT_TYPES: ["A", "X", "CA", "6mt", "PS", "C"],
-
-    OUTCOMES: [
-        { code: "goal", label: "Goal" },
-        { code: "saved", label: "Parato" },
-        { code: "blocked", label: "Stoppato" },
-        { code: "post", label: "Palo" },
-        { code: "wide", label: "Fuori" }
+    EXCLUSION_TYPES: [
+        { code: "EC", label: "EC — Espulsione al centro" },
+        { code: "EF", label: "EF — Espulsione campo" }
     ],
 
     /**
-     * Opens the shot-details dialog.
-     * Resolves with { shotType, outcome, opponentCap } or null if cancelled.
+     * Opens the foul-details dialog.
+     * Resolves with { exclusionType, opponentCap } (exclusionType only for
+     * Exclusion) or null if cancelled.
      *
      * @param {object} game - current game object
-     * @param {string} team - shooter's team, "W" or "D"
+     * @param {string} team - the team of the player committing the foul, "W" or "D"
+     * @param {string} eventCode - "E" (Exclusion) or "P" (Penalty)
      */
-    prompt(game, team) {
+    prompt(game, team, eventCode) {
         return new Promise((resolve) => {
 
             this._installStyles();
 
+            const isExclusion = eventCode === "E";
             const oppTeam = team === "W" ? "D" : "W";
 
             const dlg = document.createElement("dialog");
-            dlg.className = "shotdetails-dialog-wrap";
+            dlg.className = "fouldetails-dialog-wrap";
 
             dlg.innerHTML = `
-                <div class="shotdetails-dialog">
+                <div class="fouldetails-dialog">
 
-                    <h2>Dettagli tiro</h2>
+                    <h2>${isExclusion ? "Dettagli espulsione" : "Dettagli rigore"}</h2>
 
-                    <div class="sd-step">
-                        <div class="sd-label">1. TIPO DI TIRO</div>
-                        <div class="sd-grid sd-grid-shottype" data-shottype>
-                            ${this.SHOT_TYPES.map(t => `
-                                <button type="button" class="sd-opt" data-value="${t}">${t}</button>
-                            `).join("")}
+                    ${isExclusion ? `
+                        <div class="fd-step">
+                            <div class="fd-label">1. TIPO DI ESPULSIONE</div>
+                            <div class="fd-grid fd-grid-type" data-exclusiontype>
+                                ${this.EXCLUSION_TYPES.map(t => `
+                                    <button type="button" class="fd-opt" data-value="${t.code}">${t.label}</button>
+                                `).join("")}
+                            </div>
                         </div>
-                    </div>
+                    ` : ""}
 
-                    <div class="sd-step">
-                        <div class="sd-label">2. ESITO</div>
-                        <div class="sd-grid" data-outcome>
-                            ${this.OUTCOMES.map(o => `
-                                <button type="button" class="sd-opt" data-value="${o.code}">${o.label}</button>
-                            `).join("")}
-                        </div>
-                    </div>
-
-                    <div class="sd-step hidden" data-opponent-step>
-                        <div class="sd-label" data-opponent-label>3. CHI HA PARATO?</div>
-                        <div class="sd-grid sd-grid-opponent" data-opponent>
+                    <div class="fd-step">
+                        <div class="fd-label">${isExclusion ? "2. CHI L'HA CAUSATA?" : "1. CHI L'HA GUADAGNATO?"}</div>
+                        <div class="fd-grid fd-grid-opponent" data-opponent>
                             ${this._opponentButtons(game, oppTeam)}
                         </div>
                     </div>
 
-                    <div class="shotdetails-actions">
+                    <div class="fouldetails-actions">
                         <button type="button" data-cancel>Annulla</button>
-                        <button type="button" class="primary" data-confirm disabled>CONFERMA TIRO</button>
+                        <button type="button" class="primary" data-confirm disabled>CONFERMA</button>
                     </div>
 
                 </div>
@@ -78,56 +69,31 @@ export const ShotDetails = {
 
             document.body.appendChild(dlg);
 
-            let shotType = null;
-            let outcome = null;
+            let exclusionType = null;
             let opponentCap = null;
 
-            const opponentStep = dlg.querySelector("[data-opponent-step]");
-            const opponentLabel = dlg.querySelector("[data-opponent-label]");
             const confirmBtn = dlg.querySelector("[data-confirm]");
 
-            const needsOpponent = () => outcome === "saved" || outcome === "blocked";
-
-            const updateOpponentVisibility = () => {
-                if (needsOpponent()) {
-                    opponentStep.classList.remove("hidden");
-                    opponentLabel.textContent = outcome === "saved"
-                        ? "3. CHI HA PARATO?"
-                        : "3. CHI HA STOPPATO?";
-                } else {
-                    opponentStep.classList.add("hidden");
-                    opponentCap = null;
-                }
-            };
-
             const updateConfirm = () => {
-                const ok = shotType && outcome && (!needsOpponent() || opponentCap);
+                const ok = (!isExclusion || exclusionType) && opponentCap;
                 confirmBtn.disabled = !ok;
             };
 
-            dlg.querySelectorAll("[data-shottype] .sd-opt").forEach((btn) => {
-                btn.addEventListener("click", () => {
-                    shotType = btn.dataset.value;
-                    dlg.querySelectorAll("[data-shottype] .sd-opt").forEach(b =>
-                        b.classList.toggle("selected", b === btn));
-                    updateConfirm();
+            if (isExclusion) {
+                dlg.querySelectorAll("[data-exclusiontype] .fd-opt").forEach((btn) => {
+                    btn.addEventListener("click", () => {
+                        exclusionType = btn.dataset.value;
+                        dlg.querySelectorAll("[data-exclusiontype] .fd-opt").forEach(b =>
+                            b.classList.toggle("selected", b === btn));
+                        updateConfirm();
+                    });
                 });
-            });
+            }
 
-            dlg.querySelectorAll("[data-outcome] .sd-opt").forEach((btn) => {
-                btn.addEventListener("click", () => {
-                    outcome = btn.dataset.value;
-                    dlg.querySelectorAll("[data-outcome] .sd-opt").forEach(b =>
-                        b.classList.toggle("selected", b === btn));
-                    updateOpponentVisibility();
-                    updateConfirm();
-                });
-            });
-
-            dlg.querySelectorAll("[data-opponent] .sd-opt").forEach((btn) => {
+            dlg.querySelectorAll("[data-opponent] .fd-opt").forEach((btn) => {
                 btn.addEventListener("click", () => {
                     opponentCap = btn.dataset.value;
-                    dlg.querySelectorAll("[data-opponent] .sd-opt").forEach(b =>
+                    dlg.querySelectorAll("[data-opponent] .fd-opt").forEach(b =>
                         b.classList.toggle("selected", b === btn));
                     updateConfirm();
                 });
@@ -139,9 +105,8 @@ export const ShotDetails = {
 
             dlg.querySelector("[data-confirm]").addEventListener("click", () => {
                 this._close(dlg, resolve, {
-                    shotType,
-                    outcome,
-                    opponentCap: needsOpponent() ? opponentCap : undefined
+                    exclusionType: isExclusion ? exclusionType : undefined,
+                    opponentCap
                 });
             });
 
@@ -169,11 +134,11 @@ export const ShotDetails = {
             });
 
         if (!players.length) {
-            return `<div class="sd-empty">Nessun giocatore nel roster avversario.</div>`;
+            return `<div class="fd-empty">Nessun giocatore nel roster avversario.</div>`;
         }
 
         return players.map(p => `
-            <button type="button" class="sd-opt" data-value="${this._esc(p.cap)}">
+            <button type="button" class="fd-opt" data-value="${this._esc(p.cap)}">
                 <b>#${this._esc(p.cap)}</b>
                 <span>${this._esc(p.name)}</span>
             </button>
@@ -190,12 +155,12 @@ export const ShotDetails = {
     },
 
     _installStyles() {
-        if (document.getElementById("wplog-shotdetails-styles")) return;
+        if (document.getElementById("wplog-fouldetails-styles")) return;
 
         const style = document.createElement("style");
-        style.id = "wplog-shotdetails-styles";
+        style.id = "wplog-fouldetails-styles";
         style.textContent = `
-            .shotdetails-dialog-wrap {
+            .fouldetails-dialog-wrap {
                 border: 0;
                 border-radius: 14px;
                 padding: 0;
@@ -204,41 +169,37 @@ export const ShotDetails = {
                 background: var(--surface-color,#151515);
                 color: inherit;
             }
-            .shotdetails-dialog-wrap::backdrop {
+            .fouldetails-dialog-wrap::backdrop {
                 background: rgba(0,0,0,.6);
             }
-            .shotdetails-dialog {
+            .fouldetails-dialog {
                 padding: 18px;
             }
-            .shotdetails-dialog h2 {
+            .fouldetails-dialog h2 {
                 margin: 0 0 10px;
             }
-            .sd-step {
+            .fd-step {
                 margin-top: 14px;
             }
-            .sd-step.hidden {
-                display: none;
-            }
-            .sd-label {
+            .fd-label {
                 font-size: .75rem;
                 font-weight: 800;
                 opacity: .7;
                 margin-bottom: 6px;
             }
-            .sd-grid {
+            .fd-grid {
                 display: grid;
-                grid-template-columns: repeat(5,minmax(0,1fr));
                 gap: 6px;
             }
-            .sd-grid-shottype {
-                grid-template-columns: repeat(3,minmax(0,1fr));
+            .fd-grid-type {
+                grid-template-columns: repeat(2,minmax(0,1fr));
             }
-            .sd-grid-opponent {
+            .fd-grid-opponent {
                 grid-template-columns: repeat(2,minmax(0,1fr));
                 max-height: 40vh;
                 overflow: auto;
             }
-            .sd-opt {
+            .fd-opt {
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -252,28 +213,28 @@ export const ShotDetails = {
                 color: inherit;
                 font-weight: 700;
             }
-            .sd-grid-opponent .sd-opt {
+            .fd-grid-opponent .fd-opt {
                 flex-direction: row;
                 justify-content: flex-start;
                 text-align: left;
                 gap: 7px;
             }
-            .sd-opt.selected {
+            .fd-opt.selected {
                 outline: 2px solid var(--accent-color,#0a84ff);
                 background: rgba(10,132,255,.15);
             }
-            .sd-empty {
+            .fd-empty {
                 opacity: .65;
                 font-size: .85rem;
                 padding: 10px 0;
             }
-            .shotdetails-actions {
+            .fouldetails-actions {
                 display: flex;
                 justify-content: flex-end;
                 gap: 8px;
                 margin-top: 16px;
             }
-            .shotdetails-actions button {
+            .fouldetails-actions button {
                 border: 1px solid var(--border-color,#555);
                 border-radius: 8px;
                 padding: 8px 12px;
@@ -281,7 +242,7 @@ export const ShotDetails = {
                 color: inherit;
                 font-weight: 700;
             }
-            .shotdetails-actions .primary {
+            .fouldetails-actions .primary {
                 background: var(--accent-color,#0a84ff);
                 color: #fff;
                 border-color: transparent;
