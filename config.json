@@ -10,7 +10,8 @@
     { "name": "Save", "color": "teal", "statsOnly": true },
     { "name": "Drawn Exclusion", "color": "teal", "statsOnly": true, "hidden": true },
     { "name": "Drawn Penalty", "color": "teal", "statsOnly": true, "hidden": true },
-    { "name": "Sprint Won", "color": "teal", "statsOnly": true }
+    { "name": "Sprint Won", "color": "teal", "statsOnly": true },
+    { "name": "Azione", "color": "teal", "statsOnly": true, "teamOnly": true }
   ],
   "RULES": {
     "_base": {

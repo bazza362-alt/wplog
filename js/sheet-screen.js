@@ -34,6 +34,7 @@ export function renderScreen(game, sheet, container) {
     page2.appendChild(sheet._renderTimeoutSummary(game));
     page2.appendChild(sheet._renderCardSummary(game));
     page2.appendChild(sheet._renderSubstitutions(game));
+    page2.appendChild(sheet._renderOffensiveActions(game));
     page2.appendChild(sheet._renderShotTypeSummary(game));
     page2.appendChild(sheet._renderPlayerShotDetail(game));
     page2.appendChild(sheet._renderPlayerStats(game));

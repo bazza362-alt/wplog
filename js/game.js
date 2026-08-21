@@ -511,6 +511,7 @@ export const Game = {
     filterLogEvents(log, rules) {
         return log.filter((entry) => {
             if (entry.event === "---") return true;
+            if (entry.event === "Azione") return true; // always show in Progress of Game
             const eventDef = rules.events.find((e) => e.code === entry.event);
             return !eventDef || !eventDef.statsOnly;
         });
@@ -801,6 +802,39 @@ export const Game = {
                 shotType: entry.shotType || "-",
                 outcome: entry.outcome == null ? "goal" : entry.outcome,
             });
+        }
+
+        return result;
+    },
+
+    /**
+     * Build offensive-action efficiency summary: number of offensive
+     * actions logged per team, goals scored, and efficiency %.
+     * Each "Azione" button press marks the start of one offensive
+     * possession — the coach presses it again when a new possession
+     * begins (e.g. after drawing an exclusion), so counts are manual
+     * and unambiguous rather than inferred from the log.
+     * @param {Object} game
+     * @returns {{ W: { actions: number, goals: number, efficiency: number|null }, D: { ... } }}
+     */
+    buildOffensiveActionsSummary(game) {
+        const result = { W: { actions: 0, goals: 0, efficiency: null }, D: { actions: 0, goals: 0, efficiency: null } };
+
+        for (const entry of game.log) {
+            if (entry.event !== "Azione" || (entry.team !== "W" && entry.team !== "D")) continue;
+            result[entry.team].actions++;
+        }
+
+        for (const entry of game.log) {
+            if (entry.event !== "G" || (entry.team !== "W" && entry.team !== "D")) continue;
+            if (entry.outcome == null || entry.outcome === "goal") {
+                result[entry.team].goals++;
+            }
+        }
+
+        for (const team of ["W", "D"]) {
+            const t = result[team];
+            t.efficiency = t.actions > 0 ? Math.round((t.goals / t.actions) * 100) : null;
         }
 
         return result;
