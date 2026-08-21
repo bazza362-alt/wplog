@@ -81,7 +81,7 @@ export const Game = {
     },
 
     // Add an event to the game log
-    addEvent(game, { period, time, team, cap, event, note, swapType, shotType, outcome, opponentCap }) {
+    addEvent(game, { period, time, team, cap, event, note, swapType, shotType, outcome, opponentCap, exclusionType }) {
         const rules = RULES[game.rules];
         const eventDef = rules.events.find((e) => e.code === event);
         const isStatsOnly = eventDef && eventDef.statsOnly;
@@ -117,13 +117,30 @@ export const Game = {
             swapType: swapType,
             shotType: shotType || undefined,
             outcome: outcome || undefined,
-            opponentCap: opponentCap || undefined
+            opponentCap: opponentCap || undefined,
+            exclusionType: exclusionType || undefined
         };
 
         game._nextSeq += 10;
         game.log.push(entry);
         this._sortLog(game);
         this._recalcScores(game);
+
+        // Auto-log a companion "Drawn Exclusion"/"Drawn Penalty" stat entry
+        // for the opponent player who caused/earned this Exclusion or Penalty.
+        if ((event === "E" || event === "P") && opponentCap) {
+            const opponentTeam = team === "W" ? "D" : "W";
+            const drawnEvent = event === "E" ? "Drawn Exclusion" : "Drawn Penalty";
+            this.addEvent(game, {
+                period,
+                time,
+                team: opponentTeam,
+                cap: opponentCap,
+                event: drawnEvent,
+                note: ""
+            });
+        }
+
         return entry;
     },
 
@@ -738,7 +755,7 @@ export const Game = {
      * @returns {{ types: string[], summary: { W: Object, D: Object } }}
      */
     buildShotTypeSummary(game) {
-        const types = ["A", "X", "CA", "6mt", "PS"];
+        const types = ["A", "X", "CA", "6mt", "PS", "C"];
         const summary = { W: {}, D: {} };
 
         for (const type of types) {
@@ -757,5 +774,35 @@ export const Game = {
         }
 
         return { types, summary };
+    },
+
+    /**
+     * Build per-player, per-period shot detail: every shot attempt with
+     * its type and outcome, grouped by team → cap → period.
+     * @param {Object} game
+     * @returns {{ W: Object, D: Object }}
+     */
+    buildPlayerShotDetail(game) {
+        const result = { W: {}, D: {} };
+
+        for (const entry of game.log) {
+            if (entry.event !== "G" || !entry.cap || !entry.team) continue;
+            const team = entry.team;
+            if (team !== "W" && team !== "D") continue;
+
+            const baseCap = entry.baseCap;
+            const periodStr = this.getPeriodLabel(entry.period, game.periods);
+
+            if (!result[team][baseCap]) result[team][baseCap] = {};
+            if (!result[team][baseCap][periodStr]) result[team][baseCap][periodStr] = [];
+
+            result[team][baseCap][periodStr].push({
+                time: entry.time,
+                shotType: entry.shotType || "-",
+                outcome: entry.outcome == null ? "goal" : entry.outcome,
+            });
+        }
+
+        return result;
     },
 };
