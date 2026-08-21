@@ -271,8 +271,8 @@ export const Game = {
     // Get display-formatted score (fractional for SO)
     getDisplayScore(game) {
         const score = this.getScore(game);
-        const soW = game.log.filter(e => e.event === "G" && e.team === "W" && e.period === "SO").length;
-        const soD = game.log.filter(e => e.event === "G" && e.team === "D" && e.period === "SO").length;
+        const soW = game.log.filter(e => e.event === "G" && e.team === "W" && e.period === "SO" && (e.outcome == null || e.outcome === "goal")).length;
+        const soD = game.log.filter(e => e.event === "G" && e.team === "D" && e.period === "SO" && (e.outcome == null || e.outcome === "goal")).length;
         const inSO = game.currentPeriod === "SO" || soW > 0 || soD > 0;
 
         if (!inSO) return { white: String(score.white), dark: String(score.dark) };
@@ -286,8 +286,8 @@ export const Game = {
     // Format score for a specific log entry (fractional for SO goals)
     formatEntryScore(entry, game) {
         if (entry.event !== "G") return "";
-        const soW = game.log.filter(e => e.id <= entry.id && e.event === "G" && e.team === "W" && e.period === "SO").length;
-        const soD = game.log.filter(e => e.id <= entry.id && e.event === "G" && e.team === "D" && e.period === "SO").length;
+        const soW = game.log.filter(e => e.id <= entry.id && e.event === "G" && e.team === "W" && e.period === "SO" && (e.outcome == null || e.outcome === "goal")).length;
+        const soD = game.log.filter(e => e.id <= entry.id && e.event === "G" && e.team === "D" && e.period === "SO" && (e.outcome == null || e.outcome === "goal")).length;
         if (soW === 0 && soD === 0) return entry.scoreW + " - " + entry.scoreD;
         return formatFractionalScore(entry.scoreW, soW) + " - " + formatFractionalScore(entry.scoreD, soD);
     },
@@ -514,9 +514,11 @@ export const Game = {
         for (const period of periods) {
             const wGoals = game.log.filter(
                 (e) => e.event === "G" && e.team === "W" && e.period === period
+                    && (e.outcome == null || e.outcome === "goal")
             ).length;
             const dGoals = game.log.filter(
                 (e) => e.event === "G" && e.team === "D" && e.period === period
+                    && (e.outcome == null || e.outcome === "goal")
             ).length;
             white.push(wGoals);
             dark.push(dGoals);
@@ -655,7 +657,17 @@ export const Game = {
         const rules = RULES[game.rules];
         const statTypes = rules.events
             .filter((e) => !e.teamOnly && (game.enableStats || !e.statsOnly))
-            .map((e) => ({ code: e.code, name: e.name }));
+            .flatMap((e) => {
+                // Split the "Tiro"/"Shot" event into two separate stat
+                // columns: goals scored, and shots that did not score.
+                if (e.code === "G") {
+                    return [
+                        { code: "G", name: "Gol" },
+                        { code: "S", name: "Tiro" }
+                    ];
+                }
+                return [{ code: e.code, name: e.name }];
+            });
 
         const activeStatCodesSet = new Set();
         const stats = { W: {}, D: {} };
@@ -665,7 +677,13 @@ export const Game = {
 
         for (const entry of game.log) {
             if (!entry.cap || !entry.team) continue;
-            if (!statTypes.some(st => st.code === entry.event)) continue;
+
+            // For shot events, count under "G" if scored, "S" otherwise.
+            const statCode = entry.event === "G"
+                ? ((entry.outcome == null || entry.outcome === "goal") ? "G" : "S")
+                : entry.event;
+
+            if (!statTypes.some(st => st.code === statCode)) continue;
 
             const team = entry.team;
             if (team !== "W" && team !== "D") continue;
@@ -676,22 +694,22 @@ export const Game = {
                 stats[team][baseCap] = {};
                 statsPerPeriod[team][baseCap] = {};
             }
-            if (!statsPerPeriod[team][baseCap][entry.event]) {
-                statsPerPeriod[team][baseCap][entry.event] = {};
+            if (!statsPerPeriod[team][baseCap][statCode]) {
+                statsPerPeriod[team][baseCap][statCode] = {};
             }
-            if (!totalsPerPeriod[team][entry.event]) {
-                totalsPerPeriod[team][entry.event] = {};
+            if (!totalsPerPeriod[team][statCode]) {
+                totalsPerPeriod[team][statCode] = {};
             }
 
             const periodStr = this.getPeriodLabel(entry.period, game.periods);
 
-            stats[team][baseCap][entry.event] = (stats[team][baseCap][entry.event] || 0) + 1;
-            totals[team][entry.event] = (totals[team][entry.event] || 0) + 1;
+            stats[team][baseCap][statCode] = (stats[team][baseCap][statCode] || 0) + 1;
+            totals[team][statCode] = (totals[team][statCode] || 0) + 1;
 
-            statsPerPeriod[team][baseCap][entry.event][periodStr] = (statsPerPeriod[team][baseCap][entry.event][periodStr] || 0) + 1;
-            totalsPerPeriod[team][entry.event][periodStr] = (totalsPerPeriod[team][entry.event][periodStr] || 0) + 1;
+            statsPerPeriod[team][baseCap][statCode][periodStr] = (statsPerPeriod[team][baseCap][statCode][periodStr] || 0) + 1;
+            totalsPerPeriod[team][statCode][periodStr] = (totalsPerPeriod[team][statCode][periodStr] || 0) + 1;
 
-            activeStatCodesSet.add(entry.event);
+            activeStatCodesSet.add(statCode);
         }
 
         if (activeStatCodesSet.size === 0) return null;
@@ -711,5 +729,33 @@ export const Game = {
             statsPerPeriod,
             totalsPerPeriod,
         };
+    },
+
+    /**
+     * Build shot-type breakdown: attempts, goals, and success % per shot
+     * type (A, X, CA, 6mt, PS), per team.
+     * @param {Object} game
+     * @returns {{ types: string[], summary: { W: Object, D: Object } }}
+     */
+    buildShotTypeSummary(game) {
+        const types = ["A", "X", "CA", "6mt", "PS"];
+        const summary = { W: {}, D: {} };
+
+        for (const type of types) {
+            summary.W[type] = { attempts: 0, goals: 0 };
+            summary.D[type] = { attempts: 0, goals: 0 };
+        }
+
+        for (const entry of game.log) {
+            if (entry.event !== "G" || !entry.shotType || !entry.team) continue;
+            if (!summary[entry.team] || !summary[entry.team][entry.shotType]) continue;
+
+            summary[entry.team][entry.shotType].attempts++;
+            if (entry.outcome == null || entry.outcome === "goal") {
+                summary[entry.team][entry.shotType].goals++;
+            }
+        }
+
+        return { types, summary };
     },
 };
