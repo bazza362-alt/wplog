@@ -2,7 +2,8 @@
  * wplog — Shot Details
  *
  * Second-step dialog for "Tiro" (Shot/Goal) events: shot type,
- * outcome, and (if saved/blocked) which opponent made the play.
+ * outcome, (if saved/blocked) which opponent made the play, and
+ * finally the goal-zone the shot was aimed at.
  */
 
 export const ShotDetails = {
@@ -17,9 +18,21 @@ export const ShotDetails = {
         { code: "wide", label: "Fuori" }
     ],
 
+    ZONES: [
+        { code: "TL", label: "Alto Sx" },
+        { code: "TC", label: "Alto Centro" },
+        { code: "TR", label: "Alto Dx" },
+        { code: "BL", label: "Basso Sx" },
+        { code: "BC", label: "Basso Centro" },
+        { code: "BR", label: "Basso Dx" },
+        { code: "WL", label: "Fuori Sx" },
+        { code: "WR", label: "Fuori Dx" },
+        { code: "WT", label: "Alto Fuori" }
+    ],
+
     /**
      * Opens the shot-details dialog.
-     * Resolves with { shotType, outcome, opponentCap } or null if cancelled.
+     * Resolves with { shotType, outcome, opponentCap, zone } or null if cancelled.
      *
      * @param {object} game - current game object
      * @param {string} team - shooter's team, "W" or "D"
@@ -64,6 +77,21 @@ export const ShotDetails = {
                         </div>
                     </div>
 
+                    <div class="sd-step" data-zone-step>
+                        <div class="sd-label">4. ZONA DELLA PORTA</div>
+                        <div class="sd-goal" data-zone>
+                            <button type="button" class="sd-zone sd-zone-wt" data-value="WT">ALTO FUORI</button>
+                            <button type="button" class="sd-zone sd-zone-wl" data-value="WL">FUORI SX</button>
+                            <button type="button" class="sd-zone sd-zone-tl" data-value="TL">AS</button>
+                            <button type="button" class="sd-zone sd-zone-tc" data-value="TC">AC</button>
+                            <button type="button" class="sd-zone sd-zone-tr" data-value="TR">AD</button>
+                            <button type="button" class="sd-zone sd-zone-wr" data-value="WR">FUORI DX</button>
+                            <button type="button" class="sd-zone sd-zone-bl" data-value="BL">BS</button>
+                            <button type="button" class="sd-zone sd-zone-bc" data-value="BC">BC</button>
+                            <button type="button" class="sd-zone sd-zone-br" data-value="BR">BD</button>
+                        </div>
+                    </div>
+
                     <div class="shotdetails-actions">
                         <button type="button" data-cancel>Annulla</button>
                         <button type="button" class="primary" data-confirm disabled>CONFERMA TIRO</button>
@@ -81,6 +109,7 @@ export const ShotDetails = {
             let shotType = null;
             let outcome = null;
             let opponentCap = null;
+            let zone = null;
 
             const opponentStep = dlg.querySelector("[data-opponent-step]");
             const opponentLabel = dlg.querySelector("[data-opponent-label]");
@@ -101,7 +130,7 @@ export const ShotDetails = {
             };
 
             const updateConfirm = () => {
-                const ok = shotType && outcome && (!needsOpponent() || opponentCap);
+                const ok = shotType && outcome && (!needsOpponent() || opponentCap) && zone;
                 confirmBtn.disabled = !ok;
             };
 
@@ -133,6 +162,15 @@ export const ShotDetails = {
                 });
             });
 
+            dlg.querySelectorAll("[data-zone] .sd-zone").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    zone = btn.dataset.value;
+                    dlg.querySelectorAll("[data-zone] .sd-zone").forEach(b =>
+                        b.classList.toggle("selected", b === btn));
+                    updateConfirm();
+                });
+            });
+
             dlg.querySelector("[data-cancel]").addEventListener("click", () => {
                 this._close(dlg, resolve, null);
             });
@@ -141,7 +179,8 @@ export const ShotDetails = {
                 this._close(dlg, resolve, {
                     shotType,
                     outcome,
-                    opponentCap: needsOpponent() ? opponentCap : undefined
+                    opponentCap: needsOpponent() ? opponentCap : undefined,
+                    zone
                 });
             });
 
@@ -209,6 +248,8 @@ export const ShotDetails = {
             }
             .shotdetails-dialog {
                 padding: 18px;
+                max-height: 85vh;
+                overflow-y: auto;
             }
             .shotdetails-dialog h2 {
                 margin: 0 0 10px;
@@ -267,6 +308,62 @@ export const ShotDetails = {
                 font-size: .85rem;
                 padding: 10px 0;
             }
+
+            /* Goal zone diagram */
+            .sd-goal {
+                display: grid;
+                grid-template-columns: 0.8fr 1fr 1fr 1fr 0.8fr;
+                grid-template-rows: 0.7fr 1fr 1fr;
+                gap: 5px;
+                aspect-ratio: 5 / 3;
+                background: rgba(127,127,127,.08);
+                border: 2px solid var(--border-color,#666);
+                border-radius: 10px;
+                padding: 6px;
+            }
+            .sd-zone {
+                border: 1px solid var(--border-color,#555);
+                border-radius: 6px;
+                background: transparent;
+                color: inherit;
+                font-weight: 800;
+                font-size: .72rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                line-height: 1.1;
+                padding: 2px;
+            }
+            .sd-zone.selected {
+                outline: 2px solid var(--accent-color,#0a84ff);
+                background: rgba(10,132,255,.2);
+            }
+            .sd-zone-wt {
+                grid-column: 1 / -1;
+                grid-row: 1;
+                background: rgba(255,255,255,.04);
+                border-style: dashed;
+            }
+            .sd-zone-wl {
+                grid-column: 1;
+                grid-row: 2 / span 2;
+                background: rgba(255,255,255,.04);
+                border-style: dashed;
+            }
+            .sd-zone-wr {
+                grid-column: 5;
+                grid-row: 2 / span 2;
+                background: rgba(255,255,255,.04);
+                border-style: dashed;
+            }
+            .sd-zone-tl { grid-column: 2; grid-row: 2; }
+            .sd-zone-tc { grid-column: 3; grid-row: 2; }
+            .sd-zone-tr { grid-column: 4; grid-row: 2; }
+            .sd-zone-bl { grid-column: 2; grid-row: 3; }
+            .sd-zone-bc { grid-column: 3; grid-row: 3; }
+            .sd-zone-br { grid-column: 4; grid-row: 3; }
+
             .shotdetails-actions {
                 display: flex;
                 justify-content: flex-end;
