@@ -376,6 +376,14 @@ export const Game = {
                     limit: rules.foulOutLimit,
                 };
             }
+            // One foul away from being disqualified — give the coach a heads-up.
+            if (fouls + 1 === rules.foulOutLimit - 1) {
+                return {
+                    type: "warning",
+                    count: fouls + 1,
+                    limit: rules.foulOutLimit,
+                };
+            }
         }
 
         return null;

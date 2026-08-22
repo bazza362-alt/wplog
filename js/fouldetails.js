@@ -12,10 +12,22 @@ export const FoulDetails = {
         { code: "EF", label: "EF — Espulsione campo" }
     ],
 
+    PENALTY_OUTCOMES: [
+        { code: "goal", label: "Goal" },
+        { code: "saved", label: "Parato" },
+        { code: "post", label: "Palo" },
+        { code: "wide", label: "Fuori" }
+    ],
+
     /**
      * Opens the foul-details dialog.
-     * Resolves with { exclusionType, opponentCap } (exclusionType only for
-     * Exclusion) or null if cancelled.
+     *
+     * For Exclusion, resolves with { exclusionType, opponentCap }.
+     * For Penalty, resolves with { opponentCap, shooterCap, shotOutcome } —
+     * the resulting penalty shot (fixed type "PS") is logged automatically
+     * by the caller using these three fields, at the same time as the foul.
+     *
+     * Resolves null if cancelled.
      *
      * @param {object} game - current game object
      * @param {string} team - the team of the player committing the foul, "W" or "D"
@@ -27,6 +39,7 @@ export const FoulDetails = {
             this._installStyles();
 
             const isExclusion = eventCode === "E";
+            const isPenalty = eventCode === "P";
             const oppTeam = team === "W" ? "D" : "W";
 
             const dlg = document.createElement("dialog");
@@ -55,6 +68,24 @@ export const FoulDetails = {
                         </div>
                     </div>
 
+                    ${isPenalty ? `
+                        <div class="fd-step">
+                            <div class="fd-label">2. CHI TIRA?</div>
+                            <div class="fd-grid fd-grid-opponent" data-shooter>
+                                ${this._opponentButtons(game, oppTeam)}
+                            </div>
+                        </div>
+
+                        <div class="fd-step">
+                            <div class="fd-label">3. ESITO DEL TIRO</div>
+                            <div class="fd-grid fd-grid-outcome" data-outcome>
+                                ${this.PENALTY_OUTCOMES.map(o => `
+                                    <button type="button" class="fd-opt" data-value="${o.code}">${o.label}</button>
+                                `).join("")}
+                            </div>
+                        </div>
+                    ` : ""}
+
                     <div class="fouldetails-actions">
                         <button type="button" data-cancel>Annulla</button>
                         <button type="button" class="primary" data-confirm disabled>CONFERMA</button>
@@ -71,11 +102,15 @@ export const FoulDetails = {
 
             let exclusionType = null;
             let opponentCap = null;
+            let shooterCap = null;
+            let shotOutcome = null;
 
             const confirmBtn = dlg.querySelector("[data-confirm]");
 
             const updateConfirm = () => {
-                const ok = (!isExclusion || exclusionType) && opponentCap;
+                const ok = isPenalty
+                    ? (opponentCap && shooterCap && shotOutcome)
+                    : ((!isExclusion || exclusionType) && opponentCap);
                 confirmBtn.disabled = !ok;
             };
 
@@ -99,6 +134,26 @@ export const FoulDetails = {
                 });
             });
 
+            if (isPenalty) {
+                dlg.querySelectorAll("[data-shooter] .fd-opt").forEach((btn) => {
+                    btn.addEventListener("click", () => {
+                        shooterCap = btn.dataset.value;
+                        dlg.querySelectorAll("[data-shooter] .fd-opt").forEach(b =>
+                            b.classList.toggle("selected", b === btn));
+                        updateConfirm();
+                    });
+                });
+
+                dlg.querySelectorAll("[data-outcome] .fd-opt").forEach((btn) => {
+                    btn.addEventListener("click", () => {
+                        shotOutcome = btn.dataset.value;
+                        dlg.querySelectorAll("[data-outcome] .fd-opt").forEach(b =>
+                            b.classList.toggle("selected", b === btn));
+                        updateConfirm();
+                    });
+                });
+            }
+
             dlg.querySelector("[data-cancel]").addEventListener("click", () => {
                 this._close(dlg, resolve, null);
             });
@@ -106,7 +161,9 @@ export const FoulDetails = {
             dlg.querySelector("[data-confirm]").addEventListener("click", () => {
                 this._close(dlg, resolve, {
                     exclusionType: isExclusion ? exclusionType : undefined,
-                    opponentCap
+                    opponentCap,
+                    shooterCap: isPenalty ? shooterCap : undefined,
+                    shotOutcome: isPenalty ? shotOutcome : undefined
                 });
             });
 
@@ -174,6 +231,8 @@ export const FoulDetails = {
             }
             .fouldetails-dialog {
                 padding: 18px;
+                max-height: 85vh;
+                overflow-y: auto;
             }
             .fouldetails-dialog h2 {
                 margin: 0 0 10px;
@@ -193,6 +252,9 @@ export const FoulDetails = {
             }
             .fd-grid-type {
                 grid-template-columns: repeat(2,minmax(0,1fr));
+            }
+            .fd-grid-outcome {
+                grid-template-columns: repeat(4,minmax(0,1fr));
             }
             .fd-grid-opponent {
                 grid-template-columns: repeat(2,minmax(0,1fr));
