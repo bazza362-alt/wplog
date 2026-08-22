@@ -528,7 +528,7 @@ export const Sheet = {
             table.className = "sheet-table sheet-table-compact";
             table.innerHTML = `
         <thead>
-          <tr><th>Cap</th><th>Period</th><th>Time</th><th>Type</th><th>Outcome</th></tr>
+          <tr><th>Cap</th><th>Period</th><th>Time</th><th>Type</th><th>Outcome</th><th>Zone</th></tr>
         </thead>
       `;
 
@@ -545,6 +545,7 @@ export const Sheet = {
           <td>${shot.time != null ? escapeHTML(formatTime(shot.time)) : "-"}</td>
           <td>${escapeHTML(shot.shotType)}</td>
           <td>${escapeHTML(outcomeLabels[shot.outcome] || shot.outcome)}</td>
+          <td>${escapeHTML(shot.zone || "-")}</td>
         `;
                         tbody.appendChild(tr);
                     }
