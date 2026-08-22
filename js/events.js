@@ -1125,6 +1125,8 @@ export const Events = {
                     const fouls = Game.getPlayerFouls(this.game, team, baseCap);
                     if (fouls >= rules.foulOutLimit) {
                         foulOut = { type: "accumulated", count: fouls, limit: rules.foulOutLimit };
+                    } else if (fouls === rules.foulOutLimit - 1) {
+                        foulOut = { type: "warning", count: fouls, limit: rules.foulOutLimit };
                     }
                 }
 
@@ -1134,6 +1136,11 @@ export const Events = {
                         this._showFoulOutPopup(
                             `FOUL OUT — ${teamLabel} ${cap}`,
                             `${foulOut.event} — automatic game exclusion`
+                        );
+                    } else if (foulOut.type === "warning") {
+                        this._showFoulOutPopup(
+                            `ATTENZIONE — ${teamLabel} ${cap}`,
+                            `${foulOut.count}ª esclusione — alla prossima viene espulso definitivamente`
                         );
                     } else {
                         this._showFoulOutPopup(
@@ -1186,6 +1193,22 @@ export const Events = {
                 exclusionType: foulDetails.exclusionType,
                 zone: shotDetails.zone
             });
+
+            // Penalty: automatically log the resulting shot (type "PS") for
+            // the team that earned it — same period/time, no re-entry needed.
+            if (eventDef.code === "P" && foulDetails.shooterCap && foulDetails.shotOutcome) {
+                const earningTeam = (team || this.selectedTeam) === "W" ? "D" : "W";
+                Game.addEvent(this.game, {
+                    period,
+                    time,
+                    team: earningTeam,
+                    cap: foulDetails.shooterCap,
+                    event: "G",
+                    shotType: "PS",
+                    outcome: foulDetails.shotOutcome
+                });
+            }
+
             Storage.save(this.game);
 
             // Close modal
@@ -1198,6 +1221,11 @@ export const Events = {
                     this._showFoulOutPopup(
                         `FOUL OUT — ${teamLabel} ${cap}`,
                         `${foulOut.event} — automatic game exclusion`
+                    );
+                } else if (foulOut.type === "warning") {
+                    this._showFoulOutPopup(
+                        `ATTENZIONE — ${teamLabel} ${cap}`,
+                        `${foulOut.count}ª esclusione — alla prossima viene espulso definitivamente`
                     );
                 } else {
                     this._showFoulOutPopup(
