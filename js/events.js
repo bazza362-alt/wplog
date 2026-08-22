@@ -1183,7 +1183,8 @@ export const Events = {
                 shotType: shotDetails.shotType,
                 outcome: shotDetails.outcome,
                 opponentCap: shotDetails.opponentCap || foulDetails.opponentCap,
-                exclusionType: foulDetails.exclusionType
+                exclusionType: foulDetails.exclusionType,
+                zone: shotDetails.zone
             });
             Storage.save(this.game);
 
@@ -1435,6 +1436,7 @@ export const Events = {
                     let detail = outcomeLabel;
                     if (entry.shotType) detail = `${entry.shotType} — ${detail}`;
                     if (entry.opponentCap) detail += ` (#${escapeHTML(entry.opponentCap)})`;
+                    if (entry.zone) detail += ` [${entry.zone}]`;
                     eventName = `Tiro: ${detail}`;
                 }
 
