@@ -258,6 +258,13 @@ export function validateGameData(parsed) {
                 }
             }
 
+            // zone (optional, only for "Tiro"/Goal events)
+            if (entry.zone != null && entry.zone !== "") {
+                if (!_isString(entry.zone) || !["TL", "TC", "TR", "BL", "BC", "BR", "WL", "WR", "WT"].includes(entry.zone)) {
+                    return _fail(`Log entry ${i + 1}: invalid zone "${entry.zone}".`);
+                }
+            }
+
             // ── Migrate legacy coach cap "C" → "HC" ──
             if (entry.cap === "C") entry.cap = "HC";
 
@@ -279,6 +286,7 @@ export function validateGameData(parsed) {
                 outcome: _isString(entry.outcome) ? entry.outcome : undefined,
                 opponentCap: _isString(entry.opponentCap) ? entry.opponentCap : undefined,
                 exclusionType: _isString(entry.exclusionType) ? entry.exclusionType : undefined,
+                zone: _isString(entry.zone) ? entry.zone : undefined,
             });
         }
 

@@ -81,7 +81,7 @@ export const Game = {
     },
 
     // Add an event to the game log
-    addEvent(game, { period, time, team, cap, event, note, swapType, shotType, outcome, opponentCap, exclusionType }) {
+    addEvent(game, { period, time, team, cap, event, note, swapType, shotType, outcome, opponentCap, exclusionType, zone }) {
         const rules = RULES[game.rules];
         const eventDef = rules.events.find((e) => e.code === event);
         const isStatsOnly = eventDef && eventDef.statsOnly;
@@ -118,7 +118,8 @@ export const Game = {
             shotType: shotType || undefined,
             outcome: outcome || undefined,
             opponentCap: opponentCap || undefined,
-            exclusionType: exclusionType || undefined
+            exclusionType: exclusionType || undefined,
+            zone: zone || undefined
         };
 
         game._nextSeq += 10;
@@ -801,6 +802,7 @@ export const Game = {
                 time: entry.time,
                 shotType: entry.shotType || "-",
                 outcome: entry.outcome == null ? "goal" : entry.outcome,
+                zone: entry.zone || "-",
             });
         }
 
