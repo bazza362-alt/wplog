@@ -113,9 +113,14 @@ export const ShotDetails = {
 
             const opponentStep = dlg.querySelector("[data-opponent-step]");
             const opponentLabel = dlg.querySelector("[data-opponent-label]");
+            const zoneStep = dlg.querySelector("[data-zone-step]");
             const confirmBtn = dlg.querySelector("[data-confirm]");
 
             const needsOpponent = () => outcome === "saved" || outcome === "blocked";
+
+            // A blocked shot (stoppato) never reaches the goal, so there is
+            // no meaningful zone to record.
+            const needsZone = () => outcome !== "blocked";
 
             const updateOpponentVisibility = () => {
                 if (needsOpponent()) {
@@ -129,8 +134,18 @@ export const ShotDetails = {
                 }
             };
 
+            const updateZoneVisibility = () => {
+                if (needsZone()) {
+                    zoneStep.classList.remove("hidden");
+                } else {
+                    zoneStep.classList.add("hidden");
+                    zone = null;
+                    dlg.querySelectorAll("[data-zone] .sd-zone").forEach(b => b.classList.remove("selected"));
+                }
+            };
+
             const updateConfirm = () => {
-                const ok = shotType && outcome && (!needsOpponent() || opponentCap) && zone;
+                const ok = shotType && outcome && (!needsOpponent() || opponentCap) && (!needsZone() || zone);
                 confirmBtn.disabled = !ok;
             };
 
@@ -149,6 +164,7 @@ export const ShotDetails = {
                     dlg.querySelectorAll("[data-outcome] .sd-opt").forEach(b =>
                         b.classList.toggle("selected", b === btn));
                     updateOpponentVisibility();
+                    updateZoneVisibility();
                     updateConfirm();
                 });
             });
@@ -180,7 +196,7 @@ export const ShotDetails = {
                     shotType,
                     outcome,
                     opponentCap: needsOpponent() ? opponentCap : undefined,
-                    zone
+                    zone: needsZone() ? zone : undefined
                 });
             });
 
